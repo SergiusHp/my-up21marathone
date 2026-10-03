@@ -2,590 +2,392 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!--
+  ZOOM FIX: maximum-scale=1 + user-scalable=no забороняють авто-наближення на iOS при фокусі в полі.
+  Додатково всі <input> нижче мають font-size >= 16px (головна причина зуму).
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>План до півмарафону · 21,1 км</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  :root{
-    --accent-1:#ff6a4d;
-    --accent-2:#ffb238;
-    --accent-grad: linear-gradient(90deg,#ff6a4d,#ffb238);
-    --success:#5fd39a;
-    --success-dim: rgba(95,211,154,0.14);
-    --danger:#ff6b6b;
-    --phase-1:#5b8def;
-    --phase-2:#3fae8a;
-    --phase-3:#f2924b;
-    --phase-4:#f2c230;
-    --phase-5:#c792ea;
-    --phase-6:#ff5c7a;
-    --rest:#5a6472;
-    --radius-sm:10px;
-    --radius-md:16px;
-    --radius-lg:26px;
-    --radius-pill:999px;
-    --shadow-modal: 0 24px 60px rgba(0,0,0,0.45);
-    --font-display:'Oswald', sans-serif;
-    --font-body:'Inter', sans-serif;
-  }
+/* =====================================================================
+   СТИЛІ
+   Структура: 1) змінні/теми  2) базове  3) шапка  4) прогрес  5) вкладки
+   6) екран «Сьогодні»  7) список плану  8) екран налаштування
+   9) модальні вікна  10) вага  11) [НОВЕ] пауза/хвороба  12) адаптив
+   ===================================================================== */
 
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    --bg:#11151a;
-    --bg-grad: radial-gradient(1200px 600px at 50% -10%, #1a2029 0%, #11151a 55%);
-    --surface:#1a2029;
-    --surface-2:#212934;
-    --surface-3:#262f3b;
-    --border:#2c3542;
-    --border-soft:#232b36;
-    --text:#eeece4;
-    --text-dim:#aab0ba;
-    --text-faint:#6d7580;
-    --dash-color: rgba(255,255,255,0.018);
-    --calendar-invert: 0.8;
+/* ---------- 1. Змінні та теми ---------- */
+:root{
+  --accent-1:#ff6a4d;
+  --accent-2:#ffb238;
+  --accent-grad: linear-gradient(90deg,#ff6a4d,#ffb238);
+  --success:#5fd39a;
+  --success-dim: rgba(95,211,154,0.14);
+  --danger:#ff6b6b;
+  --warn:#f2c230;                 /* [НОВЕ] колір для паузи/хвороби */
+  --warn-dim: rgba(242,194,48,0.12);
+  /* Кольори фаз плану (1–6) */
+  --phase-1:#5b8def; --phase-2:#3fae8a; --phase-3:#f2924b;
+  --phase-4:#f2c230; --phase-5:#c792ea; --phase-6:#ff5c7a;
+  --rest:#5a6472;
+  --radius-sm:10px; --radius-md:16px; --radius-lg:26px; --radius-pill:999px;
+  --shadow-modal: 0 24px 60px rgba(0,0,0,0.45);
+  --font-display:'Oswald', sans-serif;
+  --font-body:'Inter', sans-serif;
+}
 
-    background:var(--bg-grad);
-    background-color:var(--bg);
-    color:var(--text);
-    font-family:var(--font-body);
-    min-height:100vh;
-    -webkit-font-smoothing:antialiased;
-    background-attachment:fixed;
-    transition:background-color .25s ease, color .25s ease;
-  }
-  body[data-theme="light"]{
-    --bg:#eef0f3;
-    --bg-grad: radial-gradient(1200px 600px at 50% -10%, #ffffff 0%, #e9ebef 60%);
-    --surface:#ffffff;
-    --surface-2:#f3f4f6;
-    --surface-3:#e7e9ed;
-    --border:#dde0e5;
-    --border-soft:#e8eaed;
-    --text:#161a1f;
-    --text-dim:#4c525a;
-    --text-faint:#868c95;
-    --dash-color: rgba(20,30,45,0.045);
-    --calendar-invert: 0;
-    --shadow-modal: 0 24px 60px rgba(30,35,45,0.16);
-  }
-  body[data-theme="gray"]{
-    --bg:#48494c;
-    --bg-grad: radial-gradient(1200px 600px at 50% -10%, #525356 0%, #48494c 60%);
-    --surface:#525356;
-    --surface-2:#5a5b5f;
-    --surface-3:#636469;
-    --border:#6b6c71;
-    --border-soft:#5f6065;
-    --text:#f7f7f6;
-    --text-dim:#cacbcd;
-    --text-faint:#9b9c9f;
-    --dash-color: rgba(255,255,255,0.03);
-    --calendar-invert: 0.85;
-    --shadow-modal: 0 24px 60px rgba(0,0,0,0.35);
-  }
-  body::before{
-    content:"";
-    position:fixed; inset:0;
-    pointer-events:none;
-    opacity:0.5;
-    background-image: repeating-linear-gradient(90deg, transparent 0 38px, var(--dash-color) 38px 40px);
-  }
-  ::selection{ background: rgba(255,106,77,0.35); }
-  a{color:inherit;}
-  button{font-family:inherit;}
-  h1,h2,h3,h4{font-family:var(--font-display); margin:0; letter-spacing:0.01em; font-weight:600;}
-  p{margin:0;}
-  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+/* Темна тема (за замовчуванням) */
+body{
+  --bg:#11151a;
+  --bg-grad: radial-gradient(1200px 600px at 50% -10%, #1a2029 0%, #11151a 55%);
+  --surface:#1a2029; --surface-2:#212934; --surface-3:#262f3b;
+  --border:#2c3542; --border-soft:#232b36;
+  --text:#eeece4; --text-dim:#aab0ba; --text-faint:#6d7580;
+  --dash-color: rgba(255,255,255,0.018);
+  --calendar-invert: 0.8;
+}
+/* Світла тема */
+body[data-theme="light"]{
+  --bg:#eef0f3;
+  --bg-grad: radial-gradient(1200px 600px at 50% -10%, #ffffff 0%, #e9ebef 60%);
+  --surface:#ffffff; --surface-2:#f3f4f6; --surface-3:#e7e9ed;
+  --border:#dde0e5; --border-soft:#e8eaed;
+  --text:#161a1f; --text-dim:#4c525a; --text-faint:#868c95;
+  --dash-color: rgba(20,30,45,0.045);
+  --calendar-invert: 0;
+  --shadow-modal: 0 24px 60px rgba(30,35,45,0.16);
+}
+/* Графітова тема */
+body[data-theme="gray"]{
+  --bg:#262a31;
+  --bg-grad: radial-gradient(1200px 600px at 50% -10%, #323843 0%, #262a31 55%);
+  --surface:#2d323b; --surface-2:#363c46; --surface-3:#404652;
+  --border:#4a5160; --border-soft:#3a404b;
+  --text:#eef1f5; --text-dim:#a7afbc; --text-faint:#727a88;
+  --dash-color: rgba(180,195,220,0.035);
+  --calendar-invert: 0.82;
+}
 
-  .shell{
-    max-width:640px;
-    margin:0 auto;
-    padding:calc(22px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(54px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
-    position:relative;
-    min-height:100vh;
-  }
+/* ---------- 2. Базові правила ---------- */
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+html{ -webkit-text-size-adjust:100%; }   /* ZOOM FIX: браузер не збільшує текст сам */
+body{
+  background:var(--bg-grad); background-color:var(--bg); background-attachment:fixed;
+  color:var(--text); font-family:var(--font-body);
+  min-height:100vh; -webkit-font-smoothing:antialiased;
+  transition:background-color .25s ease, color .25s ease;
+}
+/* Декоративні вертикальні штрихи на фоні */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; opacity:0.5;
+  background-image: repeating-linear-gradient(90deg, transparent 0 38px, var(--dash-color) 38px 40px);
+}
+::selection{ background: rgba(255,106,77,0.35); }
+a{color:inherit;}
+button{font-family:inherit;}
+h1,h2,h3,h4{font-family:var(--font-display); margin:0; letter-spacing:0.01em; font-weight:600;}
+p{margin:0;}
 
-  /* ---------- Top bar ---------- */
-  .topbar{
-    display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
-    margin-bottom:18px;
-  }
-  .brand{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto; }
-  .brand-kicker{ font-size:11.5px; letter-spacing:0.14em; color:var(--text-faint); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .brand-title{ font-family:var(--font-display); font-size:19px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .brand-clock{
-    margin-top:5px; font-size:11.5px; color:var(--text-faint);
-    display:flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  .clock-dot{
-    width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0;
-    box-shadow:0 0 0 3px var(--success-dim);
-  }
-  .topbar-actions{ display:flex; gap:6px; flex-shrink:0; }
-  .icon-btn{
-    width:36px; height:36px; border-radius:var(--radius-pill);
-    border:1px solid var(--border); background:var(--surface);
-    color:var(--text-dim); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:border-color .15s ease, color .15s ease, background .15s ease;
-  }
-  .icon-btn:hover{ color:var(--text); border-color:#3a4451; background:var(--surface-2); }
-  .icon-btn svg{ width:17px; height:17px; }
+/* ZOOM FIX: будь-яке поле вводу — мінімум 16px, інакше iOS робить зум.
+   Конкретні класи нижче теж тримають 16px. */
+input, select, textarea{ font-size:16px; }
 
-  /* ---------- Quote strip ---------- */
-  .quote-strip{
-    padding:14px 16px;
-    border:1px solid var(--border-soft);
-    border-left:3px solid var(--accent-1);
-    border-radius:var(--radius-sm);
-    background:var(--surface);
-    margin-bottom:18px;
-  }
-  .quote-text{ font-size:14.5px; line-height:1.45; color:var(--text); font-style:italic; }
-  .quote-author{ margin-top:6px; font-size:12px; color:var(--text-faint); font-style:normal; }
+.shell{
+  max-width:640px; margin:0 auto; position:relative; min-height:100vh;
+  padding:calc(22px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(54px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
+}
 
-  /* ---------- Road / progress ---------- */
-  .road-wrap{ margin-bottom:22px; margin-top:8px; }
-  .road-top-row{ display:flex; justify-content:flex-end; align-items:baseline; gap:6px; margin-bottom:32px; }
-  .road-pct{ font-family:var(--font-display); font-size:20px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
-  .road-pct-label{ font-size:11px; color:var(--text-faint); }
-  .road-track{
-    position:relative;
-    height:14px;
-    border-radius:var(--radius-pill);
-    background:var(--surface-2);
-    border:1px solid var(--border);
-    overflow:visible;
-  }
-  .road-track::after{
-    content:"";
-    position:absolute; left:10px; right:10px; top:50%; height:0;
-    border-top:2px dashed rgba(255,255,255,0.10);
-    transform:translateY(-50%);
-  }
-  .road-fill{
-    position:absolute; inset:0; width:0%;
-    border-radius:var(--radius-pill);
-    background:var(--accent-grad);
-    transition:width .5s cubic-bezier(.2,.8,.2,1);
-  }
-  .road-runner{
-    position:absolute; left:0%; bottom:100%;
-    transform:translate(-50%,-3px) scaleX(-1);
-    width:30px; height:30px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:22px; line-height:1;
-    transition:left .5s cubic-bezier(.2,.8,.2,1);
-    filter:drop-shadow(0 3px 4px rgba(0,0,0,.6)) drop-shadow(0 0 7px rgba(255,255,255,.4));
-  }
-  .road-marker{
-    position:absolute; top:50%; left:0%;
-    width:9px; height:9px; border-radius:50%;
-    background:var(--phase-1); border:2px solid var(--bg);
-    box-shadow:0 0 0 3px var(--surface);
-    transform:translate(-50%,-50%);
-    transition:left .5s cubic-bezier(.2,.8,.2,1);
-    z-index:2;
-  }
-  .road-flag{
-    position:absolute; right:-3px; top:50%; transform:translateY(-50%);
-    color:var(--text-dim); width:16px; height:16px;
-  }
-  .road-labels{
-    display:flex; justify-content:space-between;
-    margin-top:9px; font-size:10.5px; color:var(--text-faint);
-    letter-spacing:0.06em;
-  }
-  .road-stats{
-    margin-top:10px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;
-  }
-  .road-stats-main{ font-size:13px; color:var(--text-dim); }
-  .road-stats-main strong{ color:var(--text); font-weight:600; }
-  .road-stats-km{ font-size:12px; color:var(--text-faint); }
+/* ---------- 3. Шапка ---------- */
+.topbar{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.brand{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto; }
+.brand-kicker{ font-size:11.5px; letter-spacing:0.14em; color:var(--text-faint); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.brand-title{ font-family:var(--font-display); font-size:19px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.brand-clock{ margin-top:5px; font-size:11.5px; color:var(--text-faint); display:flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.clock-dot{ width:6px; height:6px; border-radius:50%; background:var(--success); flex-shrink:0; box-shadow:0 0 0 3px var(--success-dim); }
+.topbar-actions{ display:flex; gap:6px; flex-shrink:0; }
+.icon-btn{
+  width:36px; height:36px; border-radius:var(--radius-pill);
+  border:1px solid var(--border); background:var(--surface); color:var(--text-dim);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:border-color .15s ease, color .15s ease, background .15s ease;
+}
+.icon-btn:hover{ color:var(--text); border-color:#3a4451; background:var(--surface-2); }
+.icon-btn svg{ width:17px; height:17px; }
 
-  /* ---------- Tabs ---------- */
-  .tabs{
-    display:flex; gap:4px; padding:4px;
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius-pill);
-    margin-bottom:20px;
-  }
-  .tab-btn{
-    flex:1; border:none; background:transparent; color:var(--text-dim);
-    padding:9px 10px; border-radius:var(--radius-pill);
-    font-size:13.5px; font-weight:600; cursor:pointer;
-    transition:background .15s ease, color .15s ease;
-  }
-  .tab-btn.active{ background:var(--surface-3); color:var(--text); }
+/* Цитата */
+.quote-strip{ padding:14px 16px; border:1px solid var(--border-soft); border-left:3px solid var(--accent-1); border-radius:var(--radius-sm); background:var(--surface); margin-bottom:18px; }
+.quote-text{ font-size:14.5px; line-height:1.45; font-style:italic; }
+.quote-author{ margin-top:6px; font-size:12px; color:var(--text-faint); }
 
-  /* ---------- Today panel ---------- */
-  .panel{ display:none; }
-  .panel.active{ display:block; }
+/* ---------- 4. «Дорога» прогресу ---------- */
+.road-wrap{ margin:8px 0 22px; }
+.road-top-row{ display:flex; justify-content:flex-end; align-items:baseline; gap:6px; margin-bottom:32px; }
+.road-pct{ font-family:var(--font-display); font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; }
+.road-pct-label{ font-size:11px; color:var(--text-faint); }
+.road-track{ position:relative; height:14px; border-radius:var(--radius-pill); background:var(--surface-2); border:1px solid var(--border); overflow:visible; }
+.road-track::after{ content:""; position:absolute; left:10px; right:10px; top:50%; height:0; border-top:2px dashed rgba(255,255,255,0.10); transform:translateY(-50%); }
+.road-fill{ position:absolute; inset:0; width:0%; border-radius:var(--radius-pill); background:var(--accent-grad); transition:width .5s cubic-bezier(.2,.8,.2,1); }
+.road-runner{
+  position:absolute; left:0%; bottom:100%; transform:translate(-50%,-3px) scaleX(-1);
+  width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-size:22px; line-height:1;
+  transition:left .5s cubic-bezier(.2,.8,.2,1);
+  filter:drop-shadow(0 3px 4px rgba(0,0,0,.6)) drop-shadow(0 0 7px rgba(255,255,255,.4));
+}
+.road-marker{ position:absolute; top:50%; left:0%; width:9px; height:9px; border-radius:50%; background:var(--phase-1); border:2px solid var(--bg); box-shadow:0 0 0 3px var(--surface); transform:translate(-50%,-50%); transition:left .5s cubic-bezier(.2,.8,.2,1); z-index:2; }
+.road-flag{ position:absolute; right:-3px; top:50%; transform:translateY(-50%); color:var(--text-dim); width:16px; height:16px; }
+.road-labels{ display:flex; justify-content:space-between; margin-top:9px; font-size:10.5px; color:var(--text-faint); letter-spacing:0.06em; }
+.road-stats{ margin-top:10px; display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.road-stats-main{ font-size:13px; color:var(--text-dim); }
+.road-stats-main strong{ color:var(--text); font-weight:600; }
+.road-stats-km{ font-size:12px; color:var(--text-faint); }
 
-  .today-meta{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:10px; gap:10px; flex-wrap:wrap;
-  }
-  .today-date-block .today-weekday{ font-family:var(--font-display); font-size:26px; font-weight:600; color:var(--text); line-height:1.05;}
-  .today-date-block .today-date{ font-size:13px; color:var(--text-dim); margin-top:2px; }
-  .phase-tag{
-    display:inline-flex; align-items:center; gap:6px;
-    font-size:11.5px; font-weight:600; color:var(--text);
-    background:var(--surface-2); border:1px solid var(--border);
-    padding:6px 11px; border-radius:var(--radius-pill); white-space:nowrap;
-  }
-  .phase-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+/* ---------- 5. Вкладки ---------- */
+.tabs{ display:flex; gap:4px; padding:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-pill); margin-bottom:20px; }
+.tab-btn{ flex:1; border:none; background:transparent; color:var(--text-dim); padding:9px 10px; border-radius:var(--radius-pill); font-size:13.5px; font-weight:600; cursor:pointer; transition:background .15s ease, color .15s ease; }
+.tab-btn.active{ background:var(--surface-3); color:var(--text); }
+.panel{ display:none; }
+.panel.active{ display:block; }
 
-  .today-card{
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius-lg);
-    padding:22px 20px;
-    cursor:pointer;
-    position:relative;
-    transition:border-color .15s ease, background .15s ease;
-  }
-  .today-card:hover{ border-color:#3a4451; background:var(--surface-2); }
-  .today-card.is-done{ border-color: rgba(95,211,154,0.4); background: linear-gradient(180deg, rgba(95,211,154,0.06), transparent 60%), var(--surface); }
-  .today-card-type{ font-size:11.5px; color:var(--text-faint); font-weight:600; letter-spacing:0.03em; margin-bottom:10px;}
-  .today-plan-text{ font-size:19px; line-height:1.4; color:var(--text); font-weight:500; }
-  .today-zone-pill{
-    display:inline-block; margin-top:14px; font-size:12px; font-weight:600;
-    padding:6px 12px; border-radius:var(--radius-pill);
-    border:1px solid var(--border); color:var(--text-dim);
-  }
-  .today-open-hint{
-    margin-top:16px; font-size:12.5px; color:var(--text-faint);
-    display:flex; align-items:center; gap:6px;
-  }
-  .today-open-hint svg{ width:13px; height:13px; }
+/* ---------- 6. Екран «Сьогодні» ---------- */
+.today-meta{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:10px; flex-wrap:wrap; }
+.today-weekday{ font-family:var(--font-display); font-size:26px; font-weight:600; line-height:1.05; }
+.today-date{ font-size:13px; color:var(--text-dim); margin-top:2px; }
+.phase-tag{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; background:var(--surface-2); border:1px solid var(--border); padding:6px 11px; border-radius:var(--radius-pill); white-space:nowrap; }
+.phase-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
-  .today-actions{ display:flex; gap:10px; margin-top:16px; }
-  .btn{
-    border:1px solid var(--border); background:var(--surface-2); color:var(--text);
-    padding:12px 16px; border-radius:var(--radius-sm);
-    font-size:14px; font-weight:600; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    transition:background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
-    flex:1;
-  }
-  .btn svg{ width:16px; height:16px; }
-  .btn:active{ transform:scale(0.98); }
-  .btn-primary{ background:var(--accent-grad); border:none; color:#191008; }
-  .btn-primary:hover{ filter:brightness(1.06); }
-  .btn-ghost:hover{ border-color:#3a4451; background:var(--surface-3); }
-  .btn-done-state{ background:var(--success-dim); border-color:rgba(95,211,154,0.4); color:var(--success); }
+.today-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px 20px; cursor:pointer; position:relative; transition:border-color .15s ease, background .15s ease; }
+.today-card:hover{ border-color:#3a4451; background:var(--surface-2); }
+.today-card.is-done{ border-color: rgba(95,211,154,0.4); background: linear-gradient(180deg, rgba(95,211,154,0.06), transparent 60%), var(--surface); }
+.today-card-type{ font-size:11.5px; color:var(--text-faint); font-weight:600; letter-spacing:0.03em; margin-bottom:10px; }
+.today-plan-text{ font-size:19px; line-height:1.4; font-weight:500; }
+.today-zone-pill{ display:inline-block; margin-top:14px; font-size:12px; font-weight:600; padding:6px 12px; border-radius:var(--radius-pill); border:1px solid var(--border); color:var(--text-dim); }
+.today-open-hint{ margin-top:16px; font-size:12.5px; color:var(--text-faint); display:flex; align-items:center; gap:6px; }
+.today-open-hint svg{ width:13px; height:13px; }
+.today-actions{ display:flex; gap:10px; margin-top:16px; }
+.today-note{ margin-top:16px; padding:12px 14px; font-size:12.5px; line-height:1.5; color:var(--text-dim); background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-soft); }
+.today-note strong{ color:var(--text); }
 
-  .today-note{
-    margin-top:16px; padding:12px 14px; font-size:12.5px; line-height:1.5;
-    color:var(--text-dim); background:var(--surface-2); border-radius:var(--radius-sm);
-    border:1px solid var(--border-soft);
-  }
-  .today-note strong{ color:var(--text); }
+/* Кнопки */
+.btn{
+  border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+  padding:12px 16px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px; flex:1;
+  transition:background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
+}
+.btn svg{ width:16px; height:16px; }
+.btn:active{ transform:scale(0.98); }
+.btn-primary{ background:var(--accent-grad); border:none; color:#191008; }
+.btn-primary:hover{ filter:brightness(1.06); }
+.btn-ghost:hover{ border-color:#3a4451; background:var(--surface-3); }
+.btn-done-state{ background:var(--success-dim); border:1px solid rgba(95,211,154,0.4); color:var(--success); }
 
-  .finished-card{
-    text-align:center; padding:40px 20px;
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
-  }
-  .finished-card h2{ font-size:26px; margin-bottom:10px; }
-  .finished-card p{ color:var(--text-dim); font-size:14px; line-height:1.5; }
+.finished-card{ text-align:center; padding:40px 20px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); }
+.finished-card h2{ font-size:26px; margin-bottom:10px; }
+.finished-card p{ color:var(--text-dim); font-size:14px; line-height:1.5; }
 
-  /* ---------- Plan list panel ---------- */
-  .plan-summary{
-    display:flex; justify-content:space-between; align-items:center;
-    margin-bottom:14px; font-size:12.5px; color:var(--text-dim);
-  }
-  .week-group{
-    border:1px solid var(--border); border-radius:var(--radius-md);
-    margin-bottom:10px; overflow:hidden; background:var(--surface);
-  }
-  .week-head{
-    display:flex; align-items:center; gap:10px; justify-content:space-between;
-    padding:13px 14px; cursor:pointer; user-select:none;
-  }
-  .week-head-left{ display:flex; align-items:center; gap:10px; min-width:0; }
-  .week-num{ font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--text); flex-shrink:0; }
-  .week-phase-label{ font-size:12px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .week-head-right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
-  .week-progress-mini{ font-size:11px; color:var(--text-faint); }
-  .week-chevron{ width:14px; height:14px; color:var(--text-faint); transition:transform .15s ease; }
-  .week-group.open .week-chevron{ transform:rotate(180deg); }
-  .week-group.current{ border-color:rgba(255,106,77,0.45); }
+/* ---------- 7. Список усього плану ---------- */
+.plan-summary{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; font-size:12.5px; color:var(--text-dim); gap:10px; flex-wrap:wrap; }
+.week-group{ border:1px solid var(--border); border-radius:var(--radius-md); margin-bottom:10px; overflow:hidden; background:var(--surface); }
+.week-group.current{ border-color:rgba(255,106,77,0.45); }
+.week-head{ display:flex; align-items:center; gap:10px; justify-content:space-between; padding:13px 14px; cursor:pointer; user-select:none; }
+.week-head-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+.week-num{ font-family:var(--font-display); font-size:16px; font-weight:600; flex-shrink:0; }
+.week-phase-label{ font-size:12px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.week-head-right{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.week-progress-mini{ font-size:11px; color:var(--text-faint); }
+.week-chevron{ width:14px; height:14px; color:var(--text-faint); transition:transform .15s ease; }
+.week-group.open .week-chevron{ transform:rotate(180deg); }
+.week-days{ display:none; border-top:1px solid var(--border-soft); }
+.week-group.open .week-days{ display:block; }
+.day-row{ display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-top:1px solid var(--border-soft); cursor:pointer; }
+.day-row:first-child{ border-top:none; }
+.day-row:hover{ background:var(--surface-2); }
+.day-row.is-today{ background:rgba(255,106,77,0.06); }
+.day-check{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--border); flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; background:var(--surface-2); color:transparent; transition:all .15s ease; }
+.day-check svg{ width:12px; height:12px; }
+.day-check.checked{ background:var(--success); border-color:var(--success); color:#0d1a13; }
+.day-check.blank{ opacity:0.25; cursor:default; pointer-events:none; }
+.day-row-body{ flex:1; min-width:0; }
+.day-row-top{ display:flex; justify-content:space-between; gap:8px; margin-bottom:2px; }
+.day-row-label{ font-size:11.5px; font-weight:600; color:var(--text-faint); }
+.day-row-date{ font-size:11px; color:var(--text-faint); }
+.day-row-text{ font-size:13.5px; line-height:1.4; }
+.day-row.is-blank .day-row-text{ color:var(--text-faint); font-style:italic; }
 
-  .week-days{ display:none; border-top:1px solid var(--border-soft); }
-  .week-group.open .week-days{ display:block; }
-  .day-row{
-    display:flex; align-items:flex-start; gap:10px;
-    padding:11px 14px; border-top:1px solid var(--border-soft);
-    cursor:pointer;
-  }
-  .day-row:first-child{ border-top:none; }
-  .day-row:hover{ background:var(--surface-2); }
-  .day-row.is-today{ background:rgba(255,106,77,0.06); }
-  .day-check{
-    width:22px; height:22px; border-radius:50%; border:1.5px solid var(--border);
-    flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center;
-    background:var(--surface-2); color:transparent; transition:all .15s ease;
-  }
-  .day-check svg{ width:12px; height:12px; }
-  .day-check.checked{ background:var(--success); border-color:var(--success); color:#0d1a13; }
-  .day-check.blank{ opacity:0.25; cursor:default; pointer-events:none; }
-  .day-row-body{ flex:1; min-width:0; }
-  .day-row-top{ display:flex; justify-content:space-between; gap:8px; margin-bottom:2px;}
-  .day-row-label{ font-size:11.5px; font-weight:600; color:var(--text-faint); text-transform:none; }
-  .day-row-date{ font-size:11px; color:var(--text-faint); }
-  .day-row-text{ font-size:13.5px; color:var(--text); line-height:1.4; }
-  .day-row.is-blank .day-row-text{ color:var(--text-faint); font-style:italic; }
+/* ---------- 8. Екран налаштування старту ---------- */
+.setup-screen{ max-width:640px; margin:0 auto; padding:calc(30px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left)); }
+.setup-hero{ margin-bottom:26px; }
+.setup-kicker{ font-size:12px; letter-spacing:0.14em; color:var(--accent-1); font-weight:600; margin-bottom:10px; }
+.setup-title{ font-family:var(--font-display); font-size:34px; line-height:1.08; font-weight:600; }
+.setup-sub{ margin-top:12px; font-size:14.5px; line-height:1.55; color:var(--text-dim); max-width:52ch; }
+.setup-profile{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden; margin:22px 0; }
+.setup-profile-cell{ background:var(--surface); padding:12px 10px; }
+.setup-profile-val{ font-family:var(--font-display); font-size:18px; font-weight:600; }
+.setup-profile-key{ font-size:10.5px; color:var(--text-faint); margin-top:2px; }
+.setup-profile-key.hint{ color:var(--accent-2); }
+.setup-profile-input{ width:100%; background:transparent; border:none; outline:none; padding:0; font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text); -moz-appearance:textfield; }  /* 18px ≥ 16px: зуму немає */
+.setup-profile-input::-webkit-outer-spin-button, .setup-profile-input::-webkit-inner-spin-button{ margin-left:4px; opacity:0.6; }
 
-  /* ---------- Setup screen ---------- */
-  .setup-screen{
-    max-width:640px; margin:0 auto;
-    padding:calc(30px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
-  }
-  .setup-hero{ text-align:left; margin-bottom:26px; }
-  .setup-kicker{ font-size:12px; letter-spacing:0.14em; color:var(--accent-1); font-weight:600; margin-bottom:10px; }
-  .setup-title{ font-family:var(--font-display); font-size:34px; line-height:1.08; font-weight:600; color:var(--text); }
-  .setup-sub{ margin-top:12px; font-size:14.5px; line-height:1.55; color:var(--text-dim); max-width:52ch; }
+.zone-calc-list{ border:1px solid var(--border-soft); border-radius:var(--radius-sm); overflow:hidden; margin-top:12px; }
+.zone-calc-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 13px; font-size:12.5px; border-top:1px solid var(--border-soft); background:var(--surface); }
+.zone-calc-row:first-child{ border-top:none; }
+.zone-calc-name{ display:flex; align-items:center; gap:8px; font-weight:600; }
+.zone-calc-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.zone-calc-range{ color:var(--text-dim); font-variant-numeric:tabular-nums; }
+.maxhr-row{ display:flex; align-items:center; gap:10px; }
+.maxhr-input{ width:96px; flex-shrink:0; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:10px 11px; font-size:16px; font-family:var(--font-body); text-align:center; }  /* ZOOM FIX: було 14px */
+.maxhr-reset{ background:none; border:none; color:var(--text-faint); font-size:12px; text-decoration:underline; cursor:pointer; padding:0; flex-shrink:0; }
 
-  .setup-profile{
-    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
-    background:var(--border); border:1px solid var(--border);
-    border-radius:var(--radius-md); overflow:hidden; margin:22px 0;
-  }
-  .setup-profile-cell{ background:var(--surface); padding:12px 10px; }
-  .setup-profile-val{ font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text); }
-  .setup-profile-key{ font-size:10.5px; color:var(--text-faint); margin-top:2px; }
-  .setup-profile-cell.editable{ position:relative; }
-  .setup-profile-input{
-    width:100%; background:transparent; border:none; outline:none; padding:0;
-    font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text);
-    -moz-appearance:textfield;
-  }
-  .setup-profile-input::-webkit-outer-spin-button, .setup-profile-input::-webkit-inner-spin-button{ margin-left:4px; opacity:0.6; }
-  .setup-profile-key.hint{ color:var(--accent-2); }
+.theme-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.theme-chip{ border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 8px; cursor:pointer; text-align:center; background:var(--surface); transition:all .12s ease; }
+.theme-chip.selected{ border-color:var(--accent-1); box-shadow:0 0 0 1px var(--accent-1) inset; }
+.theme-swatch{ width:100%; height:26px; border-radius:7px; margin-bottom:7px; border:1px solid rgba(255,255,255,0.08); }
+.theme-chip-label{ font-size:11.5px; font-weight:600; color:var(--text-dim); }
+.theme-chip.selected .theme-chip-label{ color:var(--text); }
 
-  .zone-calc-list{ border:1px solid var(--border-soft); border-radius:var(--radius-sm); overflow:hidden; margin-top:12px; }
-  .zone-calc-row{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:9px 13px; font-size:12.5px; border-top:1px solid var(--border-soft); background:var(--surface);
-  }
-  .zone-calc-row:first-child{ border-top:none; }
-  .zone-calc-name{ display:flex; align-items:center; gap:8px; color:var(--text); font-weight:600; }
-  .zone-calc-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .zone-calc-range{ color:var(--text-dim); font-variant-numeric:tabular-nums; }
-  .maxhr-row{ display:flex; align-items:center; gap:10px; }
-  .maxhr-input{
-    width:84px; flex-shrink:0; background:var(--surface-2); border:1px solid var(--border);
-    color:var(--text); border-radius:var(--radius-sm); padding:10px 11px; font-size:14px; font-family:var(--font-body); text-align:center;
-  }
-  .maxhr-reset{
-    background:none; border:none; color:var(--text-faint); font-size:12px;
-    text-decoration:underline; cursor:pointer; padding:0; flex-shrink:0;
-  }
+.setup-section{ margin-top:28px; }
+.setup-section-title{ font-size:14px; font-weight:600; margin-bottom:4px; }
+.setup-section-hint{ font-size:12.5px; color:var(--text-faint); margin-bottom:14px; }
+.week-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:7px; }
+.week-chip{ aspect-ratio:1; border-radius:11px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; font-family:var(--font-display); font-size:14px; font-weight:600; gap:4px; transition:all .12s ease; }
+.week-chip .dot{ width:6px; height:6px; border-radius:50%; }
+.week-chip:hover{ border-color:#3a4451; }
+.week-chip.selected{ border-color:var(--accent-1); background:var(--surface-3); color:var(--text); box-shadow:0 0 0 1px var(--accent-1) inset; }
+.day-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:7px; }
+.day-chip{ padding:12px 4px; border-radius:11px; border:1px solid var(--border); background:var(--surface); color:var(--text-dim); text-align:center; cursor:pointer; font-size:13px; font-weight:600; transition:all .12s ease; }
+.day-chip:hover{ border-color:#3a4451; }
+.day-chip.selected{ border-color:var(--accent-1); background:var(--surface-3); color:var(--text); box-shadow:0 0 0 1px var(--accent-1) inset; }
+.setup-preview{ margin-top:18px; padding:12px 14px; border-radius:var(--radius-sm); background:var(--surface); border:1px solid var(--border-soft); font-size:12.5px; color:var(--text-dim); }
+.setup-preview strong{ color:var(--text); }
+.setup-cta{ margin-top:26px; }
+.setup-link{ margin-top:16px; background:none; border:none; color:var(--text-faint); font-size:12.5px; text-decoration:underline; cursor:pointer; padding:0; }
+#screen-setup{ scrollbar-width:none; -ms-overflow-style:none; }
+#screen-setup::-webkit-scrollbar{ width:0; height:0; display:none; }
 
-  .theme-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .theme-chip{
-    border:1px solid var(--border); border-radius:var(--radius-sm);
-    padding:12px 8px; cursor:pointer; text-align:center;
-    background:var(--surface); transition:all .12s ease;
+/* ---------- 9. Модальні вікна ---------- */
+.overlay{ position:fixed; inset:0; background:rgba(8,10,13,0.72); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; backdrop-filter:blur(2px); }
+.overlay.open{ display:flex; }
+.modal{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); width:100%; max-width:460px; max-height:min(76vh, calc(100vh - 40px)); overflow-y:auto; padding:20px 18px; box-shadow:var(--shadow-modal); animation:modalIn .16s cubic-bezier(.2,.8,.2,1); }
+@keyframes modalIn{ from{ transform:scale(.96) translateY(6px); opacity:0; } to{ transform:scale(1) translateY(0); opacity:1; } }
+.modal-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.modal-head-title{ font-family:var(--font-display); font-size:18px; font-weight:600; }
+.modal-head-sub{ font-size:12px; color:var(--text-faint); margin-top:3px; }
+.modal-close{ width:30px; height:30px; border-radius:50%; border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.modal-close svg{ width:14px; height:14px; }
+.modal-cta{ margin-top:20px; }
+
+.detail-planline{ font-size:15.5px; line-height:1.4; font-weight:500; padding:13px 14px; background:var(--surface-2); border-radius:var(--radius-sm); border-left:3px solid var(--accent-1); margin-bottom:10px; }
+.detail-zone-pill{ display:inline-block; font-size:12px; font-weight:600; color:var(--text-dim); border:1px solid var(--border); padding:5px 11px; border-radius:var(--radius-pill); margin-bottom:12px; }
+.detail-note{ font-size:13px; line-height:1.5; color:var(--text-dim); margin-bottom:10px; }
+.detail-block{ margin-top:4px; }
+.detail-block h4{ font-size:12px; letter-spacing:0.03em; color:var(--text-faint); font-weight:600; margin-bottom:7px; }
+.detail-block + .detail-block{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft); }
+
+.ex-item{ border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:12px 13px; margin-bottom:8px; background:var(--surface-2); }
+.ex-item-top{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+.ex-item-name{ font-size:14px; font-weight:600; }
+.ex-item-sets{ font-size:12px; color:var(--text-faint); white-space:nowrap; }
+.ex-item details{ margin-top:8px; }
+.ex-item summary{ font-size:12px; color:var(--accent-2); cursor:pointer; font-weight:600; list-style:none; }
+.ex-item summary::-webkit-details-marker{ display:none; }
+.ex-item-how{ font-size:12.5px; color:var(--text-dim); line-height:1.55; margin-top:8px; }
+.ex-item-mistake{ font-size:12px; color:var(--danger); line-height:1.5; margin-top:6px; }
+
+.info-section{ margin-bottom:20px; }
+.info-section h4{ font-size:13px; color:var(--text-faint); font-weight:600; margin-bottom:10px; }
+.zone-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--border-soft); font-size:13px; }
+.zone-row:first-of-type{ border-top:none; }
+.zone-row-name{ display:flex; align-items:center; gap:8px; font-weight:600; }
+.zone-row-dot{ width:8px; height:8px; border-radius:50%; }
+.zone-row-range{ color:var(--text-dim); }
+.safety-item{ margin-bottom:14px; }
+.safety-item-title{ font-size:13.5px; font-weight:600; margin-bottom:4px; }
+.safety-item-text{ font-size:12.5px; line-height:1.55; color:var(--text-dim); }
+
+/* ---------- 10. Вага ---------- */
+.weight-stats{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden; margin-bottom:16px; }
+.weight-stat-cell{ background:var(--surface-2); padding:12px 10px; text-align:center; }
+.weight-stat-val{ font-family:var(--font-display); font-size:19px; font-weight:600; }
+.weight-stat-val.up{ color:var(--danger); }
+.weight-stat-val.down{ color:var(--success); }
+.weight-stat-key{ font-size:10.5px; color:var(--text-faint); margin-top:3px; }
+.weight-goal-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.weight-goal-row label{ font-size:12.5px; color:var(--text-dim); flex-shrink:0; }
+.weight-goal-input{ width:96px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-size:16px; font-family:var(--font-body); text-align:center; }  /* ZOOM FIX: було 13.5px */
+.weight-goal-hint{ font-size:11.5px; color:var(--text-faint); }
+.weight-chart{ margin-bottom:18px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:10px 4px; }
+.weight-chart svg{ width:100%; height:auto; display:block; }
+.weight-chart-empty{ font-size:12px; color:var(--text-faint); text-align:center; padding:22px 10px; }
+.weight-form{ display:flex; gap:8px; margin-bottom:18px; align-items:stretch; }
+.weight-form input[type="date"], .weight-form input[type="number"]{ flex:1; min-width:0; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:10px 11px; font-size:16px; font-family:var(--font-body); }  /* ZOOM FIX: було 13.5px */
+.weight-form input::-webkit-calendar-picker-indicator{ filter:invert(var(--calendar-invert)); }
+.weight-form button{ flex-shrink:0; width:46px; }
+.weight-list{ display:flex; flex-direction:column; gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); border-radius:var(--radius-sm); overflow:hidden; }
+.weight-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 13px; background:var(--surface); }
+.weight-row-date{ font-size:12.5px; color:var(--text-dim); }
+.weight-row-right{ display:flex; align-items:center; gap:10px; }
+.weight-row-val{ font-size:14px; font-weight:600; }
+.weight-row-delta{ font-size:11px; color:var(--text-faint); min-width:44px; text-align:right; font-weight:600; }
+.weight-row-delta.up{ color:var(--danger); }
+.weight-row-delta.down{ color:var(--success); }
+.weight-row-del{ width:24px; height:24px; border-radius:50%; border:1px solid var(--border); background:var(--surface-2); color:var(--text-faint); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+.weight-row-del svg{ width:11px; height:11px; }
+.weight-empty{ font-size:12.5px; color:var(--text-faint); text-align:center; padding:18px 0; }
+
+/* ---------- 11. [НОВЕ] Пауза через хворобу та повернення ---------- */
+.pause-card{ background:var(--surface); border:1px solid rgba(242,194,48,0.45); border-radius:var(--radius-lg); padding:22px 20px; background-image:linear-gradient(180deg, var(--warn-dim), transparent 60%); }
+.pause-card-title{ font-family:var(--font-display); font-size:22px; font-weight:600; margin-bottom:8px; }
+.pause-card-text{ font-size:14px; line-height:1.55; color:var(--text-dim); }
+.pause-card-text strong{ color:var(--text); }
+.reentry-card{ border-color:rgba(242,194,48,0.45); }
+.btn-warn{ background:var(--warn-dim); border:1px solid rgba(242,194,48,0.45); color:var(--warn); }
+.btn-block{ width:100%; flex:none; margin-top:12px; }
+.field-label{ display:block; font-size:12.5px; color:var(--text-dim); margin:14px 0 6px; }
+.field-input{ width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:11px 12px; font-size:16px; font-family:var(--font-body); }  /* 16px — без зуму */
+.field-input::-webkit-calendar-picker-indicator{ filter:invert(var(--calendar-invert)); }
+.resume-summary{ margin:14px 0; border:1px solid var(--border-soft); border-radius:var(--radius-sm); overflow:hidden; }
+.resume-row{ display:flex; justify-content:space-between; gap:12px; padding:9px 13px; font-size:13px; border-top:1px solid var(--border-soft); background:var(--surface-2); }
+.resume-row:first-child{ border-top:none; }
+.resume-row span:first-child{ color:var(--text-dim); }
+.resume-row span:last-child{ font-weight:600; text-align:right; }
+.resume-warning{ font-size:12.5px; line-height:1.5; color:var(--warn); background:var(--warn-dim); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:10px; }
+
+/* ---------- 12. Адаптив ---------- */
+/* Планшет / десктоп: застосунок як центрована картка */
+@media (min-width:720px){
+  body{ display:flex; align-items:flex-start; justify-content:center; min-height:100vh; padding:52px 24px; }
+  #screen-setup.app-frame, #screen-app.app-frame{
+    width:100%; max-width:500px; background:var(--surface); border:1px solid var(--border); border-radius:32px;
+    box-shadow:0 40px 110px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02);
+    padding-top:26px; padding-bottom:26px; max-height:calc(100vh - 104px); overflow-y:auto; -webkit-overflow-scrolling:touch;
   }
-  .theme-chip.selected{ border-color:var(--accent-1); box-shadow:0 0 0 1px var(--accent-1) inset; }
-  .theme-swatch{ width:100%; height:26px; border-radius:7px; margin-bottom:7px; border:1px solid rgba(255,255,255,0.08); }
-  .theme-chip-label{ font-size:11.5px; font-weight:600; color:var(--text-dim); }
-  .theme-chip.selected .theme-chip-label{ color:var(--text); }
-
-  .setup-section{ margin-top:28px; }
-  .setup-section-title{ font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
-  .setup-section-hint{ font-size:12.5px; color:var(--text-faint); margin-bottom:14px; }
-
-  .week-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:7px; }
-  .week-chip{
-    aspect-ratio:1; border-radius:11px; border:1px solid var(--border);
-    background:var(--surface); color:var(--text-dim);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    cursor:pointer; font-family:var(--font-display); font-size:14px; font-weight:600; gap:4px;
-    transition:all .12s ease;
-  }
-  .week-chip .dot{ width:6px; height:6px; border-radius:50%; }
-  .week-chip:hover{ border-color:#3a4451; }
-  .week-chip.selected{ border-color:var(--accent-1); background:var(--surface-3); color:var(--text); box-shadow:0 0 0 1px var(--accent-1) inset; }
-
-  .day-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:7px; }
-  .day-chip{
-    padding:12px 4px; border-radius:11px; border:1px solid var(--border);
-    background:var(--surface); color:var(--text-dim); text-align:center;
-    cursor:pointer; font-size:13px; font-weight:600;
-    transition:all .12s ease;
-  }
-  .day-chip:hover{ border-color:#3a4451; }
-  .day-chip.selected{ border-color:var(--accent-1); background:var(--surface-3); color:var(--text); box-shadow:0 0 0 1px var(--accent-1) inset; }
-
-  .setup-preview{
-    margin-top:18px; padding:12px 14px; border-radius:var(--radius-sm);
-    background:var(--surface); border:1px solid var(--border-soft);
-    font-size:12.5px; color:var(--text-dim);
-  }
-  .setup-preview strong{ color:var(--text); }
-
-  .setup-cta{ margin-top:26px; }
-  .setup-link{
-    margin-top:16px; background:none; border:none; color:var(--text-faint);
-    font-size:12.5px; text-decoration:underline; cursor:pointer; padding:0;
-  }
-
-  /* ---------- Modal ---------- */
-  .overlay{
-    position:fixed; inset:0; background:rgba(8,10,13,0.72);
-    display:none; align-items:center; justify-content:center;
-    z-index:50; padding:20px;
-    backdrop-filter: blur(2px);
-  }
-  .overlay.open{ display:flex; }
-  .modal{
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius-lg);
-    width:100%; max-width:460px;
-    max-height:min(76vh, calc(100vh - 40px));
-    overflow-y:auto;
-    padding:20px 18px 20px;
-    box-shadow:var(--shadow-modal);
-    animation:modalIn .16s cubic-bezier(.2,.8,.2,1);
-  }
-  @keyframes modalIn{ from{ transform:scale(.96) translateY(6px); opacity:0; } to{ transform:scale(1) translateY(0); opacity:1; } }
-  .modal-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
-  .modal-head-title{ font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text); }
-  .modal-head-sub{ font-size:12px; color:var(--text-faint); margin-top:3px; }
-  .modal-close{
-    width:30px; height:30px; border-radius:50%; border:1px solid var(--border);
-    background:var(--surface-2); color:var(--text-dim); flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; cursor:pointer;
-  }
-  .modal-close svg{ width:14px; height:14px; }
-
-  .detail-planline{
-    font-size:15.5px; line-height:1.4; font-weight:500; color:var(--text);
-    padding:13px 14px; background:var(--surface-2); border-radius:var(--radius-sm);
-    border-left:3px solid var(--accent-1); margin-bottom:10px;
-  }
-  .detail-zone-pill{
-    display:inline-block; font-size:12px; font-weight:600; color:var(--text-dim);
-    border:1px solid var(--border); padding:5px 11px; border-radius:var(--radius-pill); margin-bottom:12px;
-  }
-  .detail-note{ font-size:13px; line-height:1.5; color:var(--text-dim); margin-bottom:10px; }
-  .detail-block{ margin-top:4px; }
-  .detail-block h4{ font-size:12px; letter-spacing:0.03em; color:var(--text-faint); font-weight:600; margin-bottom:7px; text-transform:none; }
-  .detail-block + .detail-block{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft); }
-
-  .ex-item{
-    border:1px solid var(--border-soft); border-radius:var(--radius-sm);
-    padding:12px 13px; margin-bottom:8px; background:var(--surface-2);
-  }
-  .ex-item-top{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
-  .ex-item-name{ font-size:14px; font-weight:600; color:var(--text); }
-  .ex-item-sets{ font-size:12px; color:var(--text-faint); white-space:nowrap; }
-  .ex-item details{ margin-top:8px; }
-  .ex-item summary{ font-size:12px; color:var(--accent-2); cursor:pointer; font-weight:600; list-style:none; }
-  .ex-item summary::-webkit-details-marker{ display:none; }
-  .ex-item-how{ font-size:12.5px; color:var(--text-dim); line-height:1.55; margin-top:8px; }
-  .ex-item-mistake{ font-size:12px; color:var(--danger); line-height:1.5; margin-top:6px; }
-
-  .modal-cta{ margin-top:20px; }
-
-  /* ---------- Info modal ---------- */
-  .info-section{ margin-bottom:20px; }
-  .info-section h4{ font-size:13px; color:var(--text-faint); font-weight:600; margin-bottom:10px; }
-  .zone-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--border-soft); font-size:13px; }
-  .zone-row:first-of-type{ border-top:none; }
-  .zone-row-name{ display:flex; align-items:center; gap:8px; color:var(--text); font-weight:600; }
-  .zone-row-dot{ width:8px; height:8px; border-radius:50%; }
-  .zone-row-range{ color:var(--text-dim); }
-  .safety-item{ margin-bottom:14px; }
-  .safety-item-title{ font-size:13.5px; font-weight:600; color:var(--text); margin-bottom:4px; }
-  .safety-item-text{ font-size:12.5px; line-height:1.55; color:var(--text-dim); }
-
-  /* ---------- Weight tracking modal ---------- */
-  .weight-stats{
-    display:grid; grid-template-columns:repeat(2,1fr); gap:1px;
-    background:var(--border); border:1px solid var(--border);
-    border-radius:var(--radius-md); overflow:hidden; margin-bottom:16px;
-  }
-  .weight-stat-cell{ background:var(--surface-2); padding:12px 10px; text-align:center; }
-  .weight-stat-val{ font-family:var(--font-display); font-size:19px; font-weight:600; color:var(--text); }
-  .weight-stat-val.up{ color:var(--danger); }
-  .weight-stat-val.down{ color:var(--success); }
-  .weight-stat-key{ font-size:10.5px; color:var(--text-faint); margin-top:3px; }
-
-  .weight-goal-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
-  .weight-goal-row label{ font-size:12.5px; color:var(--text-dim); flex-shrink:0; }
-  .weight-goal-input{
-    width:90px; background:var(--surface-2); border:1px solid var(--border);
-    color:var(--text); border-radius:var(--radius-sm); padding:9px 10px; font-size:13.5px; font-family:var(--font-body); text-align:center;
-  }
-  .weight-goal-hint{ font-size:11.5px; color:var(--text-faint); }
-
-  .weight-chart{ margin-bottom:18px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:10px 4px; }
-  .weight-chart svg{ width:100%; height:auto; display:block; }
-  .weight-chart-empty{ font-size:12px; color:var(--text-faint); text-align:center; padding:22px 10px; }
-
-  .weight-form{ display:flex; gap:8px; margin-bottom:18px; align-items:stretch; }
-  .weight-form input[type="date"], .weight-form input[type="number"]{
-    flex:1; min-width:0; background:var(--surface-2); border:1px solid var(--border);
-    color:var(--text); border-radius:var(--radius-sm); padding:10px 11px; font-size:13.5px; font-family:var(--font-body);
-  }
-  .weight-form input::-webkit-calendar-picker-indicator{ filter:invert(var(--calendar-invert)); }
-  .weight-form button{ flex-shrink:0; width:46px; }
-
-  .weight-list{ display:flex; flex-direction:column; gap:1px; background:var(--border-soft); border:1px solid var(--border-soft); border-radius:var(--radius-sm); overflow:hidden; }
-  .weight-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 13px; background:var(--surface); }
-  .weight-row-date{ font-size:12.5px; color:var(--text-dim); }
-  .weight-row-right{ display:flex; align-items:center; gap:10px; }
-  .weight-row-val{ font-size:14px; font-weight:600; color:var(--text); }
-  .weight-row-delta{ font-size:11px; color:var(--text-faint); min-width:44px; text-align:right; font-weight:600; }
-  .weight-row-delta.up{ color:var(--danger); }
-  .weight-row-delta.down{ color:var(--success); }
-  .weight-row-del{
-    width:24px; height:24px; border-radius:50%; border:1px solid var(--border);
-    background:var(--surface-2); color:var(--text-faint); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; flex-shrink:0;
-  }
-  .weight-row-del svg{ width:11px; height:11px; }
-  .weight-empty{ font-size:12.5px; color:var(--text-faint); text-align:center; padding:18px 0; }
-
-  #screen-setup{ scrollbar-width:none; -ms-overflow-style:none; }
-  #screen-setup::-webkit-scrollbar{ width:0; height:0; display:none; }
-
-  /* ---------- Tablet & desktop: centered app card ---------- */
-  @media (min-width:720px){
-    body{
-      display:flex; align-items:flex-start; justify-content:center;
-      min-height:100vh; padding:52px 24px;
-    }
-    #screen-setup.app-frame, #screen-app.app-frame{
-      width:100%; max-width:500px;
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:32px;
-      box-shadow:0 40px 110px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02);
-      padding-top:26px; padding-bottom:26px;
-      max-height:calc(100vh - 104px);
-      overflow-y:auto;
-      -webkit-overflow-scrolling:touch;
-    }
-  }
-
-  @media (max-width:380px){
-    .setup-title{ font-size:28px; }
-    .week-grid{ grid-template-columns:repeat(4,1fr); }
-    .setup-profile{ grid-template-columns:repeat(2,1fr); }
-  }
+}
+/* Дуже вузькі екрани */
+@media (max-width:380px){
+  .setup-title{ font-size:28px; }
+  .week-grid{ grid-template-columns:repeat(4,1fr); }
+  .setup-profile{ grid-template-columns:repeat(2,1fr); }
+}
 </style>
 </head>
+
 <body>
+
+<!-- =====================================================================
+     РОЗМІТКА
+     Екрани:  #screen-setup (вибір старту)  /  #screen-app (головний)
+     Модалки: detail, info, weight, theme, [НОВЕ] pause
+     ===================================================================== -->
 
 <div id="screen-setup" class="setup-screen app-frame"></div>
 
 <div id="screen-app" class="shell app-frame" style="display:none;">
+  <!-- Шапка з кнопками -->
   <div class="topbar">
     <div class="brand">
       <span class="brand-kicker">ПІВМАРАФОН · 21,1 КМ</span>
@@ -608,11 +410,13 @@
     </div>
   </div>
 
+  <!-- Цитата дня -->
   <div class="quote-strip">
     <div class="quote-text" id="quote-text">—</div>
     <div class="quote-author" id="quote-author">—</div>
   </div>
 
+  <!-- Дорога прогресу -->
   <div class="road-wrap">
     <div class="road-top-row"><span class="road-pct" id="road-pct">0%</span><span class="road-pct-label">виконано</span></div>
     <div class="road-track">
@@ -628,6 +432,7 @@
     </div>
   </div>
 
+  <!-- Вкладки -->
   <div class="tabs">
     <button class="tab-btn active" id="tab-today-btn">Сьогодні</button>
     <button class="tab-btn" id="tab-plan-btn">Весь план</button>
@@ -640,6 +445,7 @@
   </div>
 </div>
 
+<!-- Модалка: деталі дня -->
 <div class="overlay" id="overlay-detail">
   <div class="modal">
     <div class="modal-head">
@@ -650,12 +456,11 @@
       <button class="modal-close" id="detail-close" aria-label="Закрити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
     </div>
     <div id="detail-body"></div>
-    <div class="modal-cta">
-      <button class="btn btn-primary" id="detail-done-btn"></button>
-    </div>
+    <div class="modal-cta"><button class="btn btn-primary" id="detail-done-btn"></button></div>
   </div>
 </div>
 
+<!-- Модалка: дані та рекомендації -->
 <div class="overlay" id="overlay-info">
   <div class="modal">
     <div class="modal-head">
@@ -669,6 +474,7 @@
   </div>
 </div>
 
+<!-- Модалка: вага -->
 <div class="overlay" id="overlay-weight">
   <div class="modal">
     <div class="modal-head">
@@ -682,6 +488,7 @@
   </div>
 </div>
 
+<!-- Модалка: оформлення -->
 <div class="overlay" id="overlay-theme">
   <div class="modal">
     <div class="modal-head">
@@ -695,75 +502,106 @@
   </div>
 </div>
 
-<script id="plan-data" type="application/json">{"athlete":{"age":42,"height":177,"weight":84,"bmi":26.8,"bmiLabel":"Надлишкова вага","maxHR":178.6},"zones":[{"name":"Зона 1","label":"відновлення","pct":"50–60%","range":"89 – 107 уд/хв"},{"name":"Зона 2","label":"легкий/аеробний біг, більшість тренувань","pct":"60–70%","range":"107 – 125 уд/хв"},{"name":"Зона 3","label":"темповий біг","pct":"70–80%","range":"125 – 143 уд/хв"},{"name":"Зона 4","label":"порогові інтервали","pct":"80–90%","range":"143 – 161 уд/хв"},{"name":"Зона 5","label":"максимальні зусилля, не для тренувань","pct":"90–100%","range":"161 – 179 уд/хв"}],"safety":[{"title":"1. Медичний огляд (кардіолог)","text":"Вам 42 роки, ІМТ у діапазоні «надлишкова вага», і ви раніше не бігали. Перед стартом плану пройдіть огляд у терапевта/кардіолога, за потреби — ЕКГ або тест з навантаженням. Це стандартна рекомендація для дорослих 40+ без досвіду кардіо-навантажень."},{"title":"2. Взуття та огляд у ортопеда/фізіотерапевта","text":"Придбайте бігові кросівки в спеціалізованому магазині (з підбором під тип стопи). За наявності болю в колінах, спині чи ступнях — консультація фізіотерапевта ДО збільшення навантажень."},{"title":"3. Правило 10%","text":"Тижневий обсяг бігу зростає не більш ніж на ~10% від попереднього тижня. У плані нижче кожен 4-й тиждень — розвантажувальний (обсяг навмисно знижено), це захищає суглоби та зв'язки від перевантаження."},{"title":"4. Розминка й заминка","text":"Перед кожним бігом — 5 хв швидкої ходьби + динамічна розтяжка (махи ногами, випади). Після бігу — 5–10 хв ходьби для заспокоєння пульсу + статична розтяжка литок, стегон, сідниць."},{"title":"5. Дні відпочинку та кросс-тренінг","text":"Відновлення — це частина тренування, а не пропущене заняття. У дні кросс-тренінгу обирайте низькоударні активності (велосипед, плавання, еліптичний тренажер), щоб знизити навантаження на суглоби при вашій вазі."},{"title":"6. Сигнали «СТОП» — негайно припинити біг і звернутись до лікаря","text":"Біль у грудях, задишка, що не минає в спокої, запаморочення, різкий/гострий біль у суглобах чи гомілці, набряк. Легка втома і м'язова закрепаченість — це нормально; гострий біль — ні."},{"title":"7. Харчування і вода","text":"Пийте воду до, під час (на пробіжках від 60+ хв) і після тренування. Не експериментуйте з новою їжею чи гелями напередодні довгого забігу чи перегонів — тільки на тренуваннях."},{"title":"8. Сон і відновлення","text":"7–8 годин сну суттєво впливають на швидкість відновлення й ризик травм більше, ніж будь-яке окреме тренування."},{"title":"9. Силові вправи 1–2 рази/тиждень (бажано)","text":"Присідання, випади, планка, міст для сідничних м'язів — зміцнюють м'язовий корсет і знижують ризик типових бігових травм (коліно бігуна, розколена гомілка). Можна виконувати в день кросс-тренінгу, 15–20 хв."},{"title":"10. Вихідні дні","text":"Субота та неділя — повний відпочинок, як ви і просили. Єдиний виняток — сам день забігу (тиждень 24), адже більшість півмарафонів проводяться у вихідні."}],"closingNote":"Цей файл — орієнтовний план, складений з урахуванням загальних рекомендацій для бігунів-початківців. Він не замінює особистої консультації лікаря.","exercises":[{"id":1,"name":"Планка (передня)","group":"Кор","sets":"3 × 20–30 сек","how":"1) Ляжте на живіт, спертись на передпліччя (лікті під плечима) та носки стоп. 2) Підніміть таз так, щоб тіло утворило пряму лінію від голови до п'ят. 3) Напружте прес і сідниці, не затримуйте дихання, дихайте рівно. 4) Тримайте задану кількість секунд, потім опустіться і відпочиньте 30–45 сек.","mistake":"Провисання попереку вниз або підняті вгору сідниці («дах будиночка») — знімає навантаження з преса."},{"id":2,"name":"Бокова планка","group":"Кор","sets":"2 × 15–20 сек на кожен бік","how":"1) Ляжте на бік, спертись на передпліччя, лікоть під плечем. 2) Підніміть стегна, тіло — пряма лінія від голови до стоп, стопи одна на одній. 3) Напружте бічний прес, не завалюйте таз ні вперед, ні назад. 4) Тримайте, потім поверніться на інший бік.","mistake":"Опущений таз вниз — вправа перестає працювати на бічний кор."},{"id":3,"name":"Мертвий жук (Dead bug)","group":"Кор","sets":"3 × 8–10 повторень на кожну сторону","how":"1) Ляжте на спину, руки підняті вгору над грудьми, ноги зігнуті під 90° (гомілки паралельно підлозі). 2) Притисніть поперек до підлоги і тримайте його притиснутим протягом усієї вправи. 3) Повільно опустіть праву руку за голову і ліву ногу вперед-вниз, не торкаючись підлоги. 4) Поверніться у вихідне положення, повторіть з протилежною парою рука/нога.","mistake":"Поперек відривається від підлоги — прогин з'являється саме тоді, коли рука/нога опускаються далеко."},{"id":4,"name":"Сідничний міст (Glute bridge)","group":"Сідниці","sets":"3 × 12–15 повторень","how":"1) Ляжте на спину, коліна зігнуті, стопи на ширині стегон, п'яти близько до сідниць. 2) Штовхаючись п'ятами, підніміть таз вгору, стискаючи сідниці у верхній точці 1–2 сек. 3) Тіло від колін до плечей — пряма лінія, без прогину в попереку. 4) Повільно опустіться і повторіть.","mistake":"Підйом за рахунок прогину спини, а не сідниць — сідниці мають «включатись» першими."},{"id":5,"name":"Сідничний міст на одній нозі","group":"Сідниці","sets":"3 × 8–10 повторень на кожну ногу","how":"1) Те саме вихідне положення, що й у звичайному містку. 2) Одну ногу випряміть і підніміть під кутом ~45°. 3) Підніміть таз, спираючись тільки на опорну ногу, стежте, щоб таз не «завалювався» на бік. 4) Опустіться контрольовано, повторіть, потім поміняйте ногу.","mistake":"Таз перекошується вбік у верхній точці — ознака слабкості середнього сідничного м'яза, саме те, що ми зміцнюємо."},{"id":6,"name":"Мушля (Clamshell)","group":"Сідниці","sets":"2 × 15 повторень на кожен бік","how":"1) Ляжте на бік, коліна зігнуті під 90°, стопи разом, голова на витягнутій руці. 2) Не відриваючи стопи одна від одної, підніміть верхнє коліно вгору, як мушля відкривається. 3) Затримайтесь на секунду у верхній точці, відчуваючи роботу збоку сідниці. 4) Повільно опустіть коліно, повторіть.","mistake":"Розкачування тазом назад, щоб «допомогти» ноги — рухається тільки коліно, таз нерухомий."},{"id":7,"name":"Присідання з власною вагою","group":"Коліна/стабільність","sets":"3 × 12–15 повторень","how":"1) Стопи на ширині плечей, носки трохи розведені. 2) Відводьте таз назад і вниз, ніби сідаєте на стілець, коліна рухаються в напрямку носків. 3) Опускайтесь до паралелі стегон з підлогою (наскільки дозволяє гнучкість), спина пряма. 4) Штовхніться п'ятами, повернувшись у вихідне положення.","mistake":"Коліна «завалюються» всередину — свідомо штовхайте їх назовні протягом усього руху."},{"id":8,"name":"Випади вперед/назад","group":"Коліна/стабільність","sets":"2 × 10 повторень на кожну ногу","how":"1) З положення стоячи зробіть крок вперед (або назад) однією ногою. 2) Опускайтесь, поки обидва коліна не зігнуться приблизно до 90°, переднє коліно — над стопою, не за носком. 3) Штовхніться передньою ногою назад у вихідне положення. 4) Чергуйте ноги або виконайте всі повторення на одну, потім на іншу.","mistake":"Переднє коліно виходить далеко за носок або «падає» всередину — контролюйте траєкторію повільно."},{"id":9,"name":"Присід біля стіни (Wall sit)","group":"Коліна/стабільність","sets":"2–3 × 20–30 сек","how":"1) Обіпріться спиною на стіну, ноги виставте вперед. 2) Опускайтесь, поки стегна не стануть паралельні підлозі (коліна під кутом ~90°). 3) Притисніть поперек до стіни, тримайте позицію, дихайте рівно. 4) Повільно піднімайтесь, відпочиньте і повторіть.","mistake":"Коліна виходять далеко за носки або зведені всередину — стопи повинні стояти достатньо далеко від стіни."},{"id":10,"name":"Баланс на одній нозі","group":"Коліна/стабільність","sets":"2 × 30–45 сек на кожну ногу","how":"1) Станьте на одну ногу, друга злегка зігнута, руки на поясі або в сторони для балансу. 2) Тримайте коліно опорної ноги м'яким (не заблокованим), погляд — вперед, а не вниз. 3) Для ускладнення закрийте очі або злегка нахиліться корпусом вперед. 4) Поміняйте ногу.","mistake":"Погляд у підлогу і зафіксоване («заблоковане») коліно — ускладнює баланс і збільшує навантаження на суглоб."},{"id":11,"name":"Підйоми на носки (Calf raises)","group":"Литки/стопа","sets":"3 × 15–20 повторень","how":"1) Станьте прямо, стопи на ширині стегон, за потреби тримайтесь за стіну для рівноваги. 2) Повільно піднімайтесь на носки якомога вище, затримайтесь на 1 сек. 3) Контрольовано опускайтесь вниз, не «падайте» на п'яти. 4) Для ускладнення виконуйте на одній нозі по черзі.","mistake":"Швидкі, рвучкі підйоми без контролю опускання — половина користі вправи саме в повільному негативі."},{"id":12,"name":"Бічні випади (Lateral lunge)","group":"Коліна/стабільність","sets":"2 × 10 повторень на кожен бік","how":"1) Станьте прямо, ноги разом. 2) Зробіть широкий крок убік, згинаючи коліно тієї ноги, в бік якої робите крок, друга нога залишається прямою. 3) Таз відводьте назад, коліно робочої ноги — над стопою, не всередину. 4) Штовхніться робочою ногою, повертаючись у вихідне положення.","mistake":"Корпус сильно нахиляється вперед замість того, щоб таз відводився назад — тримайте груди підняті."}],"strengthComplex":{"intro":"Виконуйте у вівторок замість велосипеда (20–25 хв), на килимку, без інвентарю. Спочатку прочитайте техніку в стовпці «Як виконувати» — якість руху важливіша за кількість повторень.","basic":{"weeksLabel":"1–8","duration":"~15 хв","ids":[1,4,6,9,11]},"extended":{"weeksLabel":"9+","duration":"~20–25 хв","ids":[1,2,3,5,6,7,8,10,11]},"order":null},"weeks":[{"week":1,"phase":"1. Адаптація","days":{"mon":"Швидка хода 20 хв [Зона 1: 89–107]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"Інтервали: (1 хв легкий біг + 2 хв хода) × 8 = 24 хв [Зона 1–2: 89–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Хода 25 хв + 2–3 коротких пробіжки по 30 сек [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Мета тижня — просто звикнути рухатись 3 рази/тиждень. Не поспішайте."},{"week":2,"phase":"1. Адаптація","days":{"mon":"Хода 25 хв бадьорим темпом [Зона 1: 89–107]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"(1 хв біг + 2 хв хода) × 10 = 30 хв [Зона 1–2: 89–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Хода/легкий біг мікс 30 хв [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Слухайте суглоби та дихання. Якщо важко розмовляти — сповільніться."},{"week":3,"phase":"1. Адаптація","days":{"mon":"(2 хв біг + 2 хв хода) × 6 = 24 хв [Зона 1–2: 89–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"(2 хв біг + 1 хв хода) × 8 = 24 хв [Зона 2: 107–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Довгий: хода/біг 35 хв, легко [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Перше збільшення бігових інтервалів. Взуття вже мають бути розношені."},{"week":4,"phase":"1. Адаптація","days":{"mon":"Легкий біг/хода 20 хв (розвантаження) [Зона 1–2: 89–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"(3 хв біг + 2 хв хода) × 5 = 25 хв [Зона 2: 107–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Хода/біг 30 хв, легко [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ: обсяг навмисно нижчий — дайте тілу відновитись."},{"week":5,"phase":"2. Безперервний біг","days":{"mon":"(5 хв біг + 1 хв хода) × 4 = 24 хв [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"(8 хв біг + 2 хв хода) × 2 = 20 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: хода/біг 35 хв [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Перехід до довших бігових відрізків."},{"week":6,"phase":"2. Безперервний біг","days":{"mon":"Безперервний біг 20 хв, повільно [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"(10 хв біг + 2 хв хода) × 2 = 24 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: хода/біг 40 хв [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Перший повністю безперервний біг 20 хв — не женіть темп."},{"week":7,"phase":"2. Безперервний біг","days":{"mon":"Безперервний біг 25 хв [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"(15 хв біг + 2 хв хода) × 2 = 34 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: хода/біг 45 хв [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Обсяг зростає поступово, у межах правила 10%."},{"week":8,"phase":"2. Безперервний біг","days":{"mon":"Легкий біг 20 хв (розвантаження) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"Легкий біг 25 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: 35 хв легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ. З наступного тижня переходимо на кілометраж."},{"week":9,"phase":"3. Базовий об'єм","days":{"mon":"4 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"4 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":6,"note":"Починаємо вимірювати в км. Темп — розмовний, не женіть швидкість."},{"week":10,"phase":"3. Базовий об'єм","days":{"mon":"4 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":7,"note":"+1 км до довгого забігу — у межах правила 10%."},{"week":11,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":8,"note":"Тіло вже звикає до регулярного навантаження."},{"week":12,"phase":"3. Базовий об'єм","days":{"mon":"4 км, легко (розвантаження) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"4 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг, легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":6,"note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ перед наступним етапом зростання об'єму."},{"week":13,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"5 км, з них 10 хв бадьоріше в середині [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":9,"note":"Вперше додаємо невеликий елемент темпового бігу в середині тижня."},{"week":14,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"6 км, з них 10–12 хв у бадьорому темпі [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":10,"note":"Подвійна цифра! 10 км — гарний привід відзначити прогрес."},{"week":15,"phase":"3. Базовий об'єм","days":{"mon":"6 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"6 км, з них 12–15 хв у бадьорому темпі [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":11,"note":"Продовжуємо будувати витривалість."},{"week":16,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко (розвантаження) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг, легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":8,"note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ перед піковим блоком."},{"week":17,"phase":"4. Пік","days":{"mon":"6 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"7 км: інтервали 4×3 хв бадьоріше / 2 хв легко між [Зона 3–4: 125–161]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":12,"note":"Найбільш вимогливий блок плану. Стежте за сном і харчуванням."},{"week":18,"phase":"4. Пік","days":{"mon":"6 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"7 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":14,"note":"14 км — це вже 2/3 дистанції півмарафону."},{"week":19,"phase":"4. Пік","days":{"mon":"7 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"7 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":16,"note":"Передостанній довгий забіг. Випробуйте гель/напій, який плануєте на гонці."},{"week":20,"phase":"4. Пік","days":{"mon":"6 км, легко (перед піком — легше) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"6 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"НАЙДОВШИЙ забіг плану [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":18,"note":"Пік об'єму. Далі йде тейпер — обсяг буде тільки зменшуватись."},{"week":21,"phase":"5. Тейпер","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"6 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":12,"note":"Тейпер розпочато: обсяг знижується, тіло накопичує сили перед стартом."},{"week":22,"phase":"5. Тейпер","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг, легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":8,"note":"Менше об'єму, та сама регулярність. Довіртесь плану."},{"week":23,"phase":"5. Тейпер","days":{"mon":"4 км, легко [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"4 км, легко + 4×20 сек прискорення [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг, дуже легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":5,"note":"Останній повноцінний тренувальний тиждень перед гонкою."},{"week":24,"phase":"6. Гонка","days":{"mon":"20 хв легкий біг [Зона 2: 107–125]","tue":"Повний відпочинок","wed":"15–20 хв легкий біг + 3–4×20 сек прискорення [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Повний відпочинок або 10 хв хода + розтяжка [Зона 1: 89–107]","sat":"ВИХІДНИЙ (або день гонки, якщо забіг у суботу)","sun":"ГОНКА: ПІВМАРАФОН 21,1 КМ 🏁 (якщо забіг у неділю)"},"longRunKm":"—","note":"ГОНКА: Півмаратон 21,1 км, цільовий темп Зона 3, останні км — Зона 3–4. Сб/Нд — єдиний виняток із вихідних!"}],"totalLongRunKm":150,"zoneImportantNote":"Понад 90% усіх бігових тренувань у цьому плані мають проходити саме в Зоні 1–2 («легко, можу розмовляти»). Це не повільно — це правильно."}</script>
+<!-- [НОВЕ] Модалка: пауза через хворобу / повернення до плану.
+     Вміст (#pause-body) повністю генерується в JS — див. секцію 12. -->
+<div class="overlay" id="overlay-pause">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-head-title" id="pause-title">—</div>
+        <div class="modal-head-sub" id="pause-sub">—</div>
+      </div>
+      <button class="modal-close" id="pause-close" aria-label="Закрити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
+    </div>
+    <div id="pause-body"></div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     ДАНІ ПЛАНУ (JSON). Це єдине місце, де лежить сам тренувальний план,
+     вправи, зони та рекомендації. Логіку застосунку тут міняти не треба.
+     Формат дня у тижні: "Текст тренування [Зона N: low–high]" —
+     блок у квадратних дужках потрібен для автоперерахунку пульсових зон.
+     ===================================================================== -->
+<script id="plan-data" type="application/json">{"athlete":{"age":42,"height":177,"weight":84,"bmi":26.8,"bmiLabel":"Надлишкова вага","maxHR":178.6},"zones":[{"name":"Зона 1","label":"відновлення","pct":"50–60%","range":"89 – 107 уд/хв"},{"name":"Зона 2","label":"легкий/аеробний біг, більшість тренувань","pct":"60–70%","range":"107 – 125 уд/хв"},{"name":"Зона 3","label":"темповий біг","pct":"70–80%","range":"125 – 143 уд/хв"},{"name":"Зона 4","label":"порогові інтервали","pct":"80–90%","range":"143 – 161 уд/хв"},{"name":"Зона 5","label":"максимальні зусилля, не для тренувань","pct":"90–100%","range":"161 – 179 уд/хв"}],"safety":[{"title":"1. Медичний огляд (кардіолог)","text":"Вам 42 роки, ІМТ у діапазоні «надлишкова вага», і ви раніше не бігали. Перед стартом плану пройдіть огляд у терапевта/кардіолога, за потреби — ЕКГ або тест з навантаженням. Це стандартна рекомендація для дорослих 40+ без досвіду кардіо-навантажень."},{"title":"2. Взуття та огляд у ортопеда/фізіотерапевта","text":"Придбайте бігові кросівки в спеціалізованому магазині (з підбором під тип стопи). За наявності болю в колінах, спині чи ступнях — консультація фізіотерапевта ДО збільшення навантажень."},{"title":"3. Правило 10%","text":"Тижневий обсяг бігу зростає не більш ніж на ~10% від попереднього тижня. У плані нижче кожен 4-й тиждень — розвантажувальний (обсяг навмисно знижено), це захищає суглоби та зв'язки від перевантаження."},{"title":"4. Розминка й заминка","text":"Перед кожним бігом — 5 хв швидкої ходьби + динамічна розтяжка (махи ногами, випади). Після бігу — 5–10 хв ходьби для заспокоєння пульсу + статична розтяжка литок, стегон, сідниць."},{"title":"5. Дні відпочинку та кросс-тренінг","text":"Відновлення — це частина тренування, а не пропущене заняття. У дні кросс-тренінгу обирайте низькоударні активності (велосипед, плавання, еліптичний тренажер), щоб знизити навантаження на суглоби при вашій вазі."},{"title":"6. Сигнали «СТОП» — негайно припинити біг і звернутись до лікаря","text":"Біль у грудях, задишка, що не минає в спокої, запаморочення, різкий/гострий біль у суглобах чи гомілці, набряк. Легка втома і м'язова закрепаченість — це нормально; гострий біль — ні."},{"title":"7. Харчування і вода","text":"Пийте воду до, під час (на пробіжках від 60+ хв) і після тренування. Не експериментуйте з новою їжею чи гелями напередодні довгого забігу чи перегонів — тільки на тренуваннях."},{"title":"8. Сон і відновлення","text":"7–8 годин сну суттєво впливають на швидкість відновлення й ризик травм більше, ніж будь-яке окреме тренування."},{"title":"9. Силові вправи 1–2 рази/тиждень (бажано)","text":"Присідання, випади, планка, міст для сідничних м'язів — зміцнюють м'язовий корсет і знижують ризик типових бігових травм (коліно бігуна, розколена гомілка). Можна виконувати в день кросс-тренінгу, 15–20 хв."},{"title":"10. Вихідні дні","text":"Субота та неділя — повний відпочинок, як ви і просили. Єдиний виняток — сам день забігу (тиждень 24), адже більшість півмарафонів проводяться у вихідні."}],"closingNote":"Цей файл — орієнтовний план, складений з урахуванням загальних рекомендацій для бігунів-початківців. Він не замінює особистої консультації лікаря.","exercises":[{"id":1,"name":"Планка (передня)","group":"Кор","sets":"3 × 20–30 сек","how":"1) Ляжте на живіт, спертись на передпліччя (лікті під плечима) та носки стоп. 2) Підніміть таз так, щоб тіло утворило пряму лінію від голови до п'ят. 3) Напружте прес і сідниці, не затримуйте дихання, дихайте рівно. 4) Тримайте задану кількість секунд, потім опустіться і відпочиньте 30–45 сек.","mistake":"Провисання попереку вниз або підняті вгору сідниці («дах будиночка») — знімає навантаження з преса."},{"id":2,"name":"Бокова планка","group":"Кор","sets":"2 × 15–20 сек на кожен бік","how":"1) Ляжте на бік, спертись на передпліччя, лікоть під плечем. 2) Підніміть стегна, тіло — пряма лінія від голови до стоп, стопи одна на одній. 3) Напружте бічний прес, не завалюйте таз ні вперед, ні назад. 4) Тримайте, потім поверніться на інший бік.","mistake":"Опущений таз вниз — вправа перестає працювати на бічний кор."},{"id":3,"name":"Мертвий жук (Dead bug)","group":"Кор","sets":"3 × 8–10 повторень на кожну сторону","how":"1) Ляжте на спину, руки підняті вгору над грудьми, ноги зігнуті під 90° (гомілки паралельно підлозі). 2) Притисніть поперек до підлоги і тримайте його притиснутим протягом усієї вправи. 3) Повільно опустіть праву руку за голову і ліву ногу вперед-вниз, не торкаючись підлоги. 4) Поверніться у вихідне положення, повторіть з протилежною парою рука/нога.","mistake":"Поперек відривається від підлоги — прогин з'являється саме тоді, коли рука/нога опускаються далеко."},{"id":4,"name":"Сідничний міст (Glute bridge)","group":"Сідниці","sets":"3 × 12–15 повторень","how":"1) Ляжте на спину, коліна зігнуті, стопи на ширині стегон, п'яти близько до сідниць. 2) Штовхаючись п'ятами, підніміть таз вгору, стискаючи сідниці у верхній точці 1–2 сек. 3) Тіло від колін до плечей — пряма лінія, без прогину в попереку. 4) Повільно опустіться і повторіть.","mistake":"Підйом за рахунок прогину спини, а не сідниць — сідниці мають «включатись» першими."},{"id":5,"name":"Сідничний міст на одній нозі","group":"Сідниці","sets":"3 × 8–10 повторень на кожну ногу","how":"1) Те саме вихідне положення, що й у звичайному містку. 2) Одну ногу випряміть і підніміть під кутом ~45°. 3) Підніміть таз, спираючись тільки на опорну ногу, стежте, щоб таз не «завалювався» на бік. 4) Опустіться контрольовано, повторіть, потім поміняйте ногу.","mistake":"Таз перекошується вбік у верхній точці — ознака слабкості середнього сідничного м'яза, саме те, що ми зміцнюємо."},{"id":6,"name":"Мушля (Clamshell)","group":"Сідниці","sets":"2 × 15 повторень на кожен бік","how":"1) Ляжте на бік, коліна зігнуті під 90°, стопи разом, голова на витягнутій руці. 2) Не відриваючи стопи одна від одної, підніміть верхнє коліно вгору, як мушля відкривається. 3) Затримайтесь на секунду у верхній точці, відчуваючи роботу збоку сідниці. 4) Повільно опустіть коліно, повторіть.","mistake":"Розкачування тазом назад, щоб «допомогти» ноги — рухається тільки коліно, таз нерухомий."},{"id":7,"name":"Присідання з власною вагою","group":"Коліна/стабільність","sets":"3 × 12–15 повторень","how":"1) Стопи на ширині плечей, носки трохи розведені. 2) Відводьте таз назад і вниз, ніби сідаєте на стілець, коліна рухаються в напрямку носків. 3) Опускайтесь до паралелі стегон з підлогою (наскільки дозволяє гнучкість), спина пряма. 4) Штовхніться п'ятами, повернувшись у вихідне положення.","mistake":"Коліна «завалюються» всередину — свідомо штовхайте їх назовні протягом усього руху."},{"id":8,"name":"Випади вперед/назад","group":"Коліна/стабільність","sets":"2 × 10 повторень на кожну ногу","how":"1) З положення стоячи зробіть крок вперед (або назад) однією ногою. 2) Опускайтесь, поки обидва коліна не зігнуться приблизно до 90°, переднє коліно — над стопою, не за носком. 3) Штовхніться передньою ногою назад у вихідне положення. 4) Чергуйте ноги або виконайте всі повторення на одну, потім на іншу.","mistake":"Переднє коліно виходить далеко за носок або «падає» всередину — контролюйте траєкторію повільно."},{"id":9,"name":"Присід біля стіни (Wall sit)","group":"Коліна/стабільність","sets":"2–3 × 20–30 сек","how":"1) Обіпріться спиною на стіну, ноги виставте вперед. 2) Опускайтесь, поки стегна не стануть паралельні підлозі (коліна під кутом ~90°). 3) Притисніть поперек до стіни, тримайте позицію, дихайте рівно. 4) Повільно піднімайтесь, відпочиньте і повторіть.","mistake":"Коліна виходять далеко за носки або зведені всередину — стопи повинні стояти достатньо далеко від стіни."},{"id":10,"name":"Баланс на одній нозі","group":"Коліна/стабільність","sets":"2 × 30–45 сек на кожну ногу","how":"1) Станьте на одну ногу, друга злегка зігнута, руки на поясі або в сторони для балансу. 2) Тримайте коліно опорної ноги м'яким (не заблокованим), погляд — вперед, а не вниз. 3) Для ускладнення закрийте очі або злегка нахиліться корпусом вперед. 4) Поміняйте ногу.","mistake":"Погляд у підлогу і зафіксоване («заблоковане») коліно — ускладнює баланс і збільшує навантаження на суглоб."},{"id":11,"name":"Підйоми на носки (Calf raises)","group":"Литки/стопа","sets":"3 × 15–20 повторень","how":"1) Станьте прямо, стопи на ширині стегон, за потреби тримайтесь за стіну для рівноваги. 2) Повільно піднімайтесь на носки якомога вище, затримайтесь на 1 сек. 3) Контрольовано опускайтесь вниз, не «падайте» на п'яти. 4) Для ускладнення виконуйте на одній нозі по черзі.","mistake":"Швидкі, рвучкі підйоми без контролю опускання — половина користі вправи саме в повільному негативі."},{"id":12,"name":"Бічні випади (Lateral lunge)","group":"Коліна/стабільність","sets":"2 × 10 повторень на кожен бік","how":"1) Станьте прямо, ноги разом. 2) Зробіть широкий крок убік, згинаючи коліно тієї ноги, в бік якої робите крок, друга нога залишається прямою. 3) Таз відводьте назад, коліно робочої ноги — над стопою, не всередину. 4) Штовхніться робочою ногою, повертаючись у вихідне положення.","mistake":"Корпус сильно нахиляється вперед замість того, щоб таз відводився назад — тримайте груди підняті."}],"strengthComplex":{"intro":"Виконуйте у вівторок замість велосипеда (20–25 хв), на килимку, без інвентарю. Спочатку прочитайте техніку в стовпці «Як виконувати» — якість руху важливіша за кількість повторень.","basic":{"weeksLabel":"1–8","duration":"~15 хв","ids":[1,4,6,9,11]},"extended":{"weeksLabel":"9+","duration":"~20–25 хв","ids":[1,2,3,5,6,7,8,10,11]},"order":null},"weeks":[{"week":1,"phase":"1. Адаптація","days":{"mon":"Швидка хода 20 хв [Зона 1: 89–107]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"Інтервали: (1 хв легкий біг + 2 хв хода) × 8 = 24 хв [Зона 1–2: 89–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Хода 25 хв + 2–3 коротких пробіжки по 30 сек [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Мета тижня — просто звикнути рухатись 3 рази/тиждень. Не поспішайте."},{"week":2,"phase":"1. Адаптація","days":{"mon":"Хода 25 хв бадьорим темпом [Зона 1: 89–107]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"(1 хв біг + 2 хв хода) × 10 = 30 хв [Зона 1–2: 89–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Хода/легкий біг мікс 30 хв [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Слухайте суглоби та дихання. Якщо важко розмовляти — сповільніться."},{"week":3,"phase":"1. Адаптація","days":{"mon":"(2 хв біг + 2 хв хода) × 6 = 24 хв [Зона 1–2: 89–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"(2 хв біг + 1 хв хода) × 8 = 24 хв [Зона 2: 107–125]","thu":"","fri":"Довгий: хода/біг 35 хв, легко [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Перше збільшення бігових інтервалів. Взуття вже мають бути розношені."},{"week":4,"phase":"1. Адаптація","days":{"mon":"Легкий біг/хода 20 хв (розвантаження) [Зона 1–2: 89–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"(3 хв біг + 2 хв хода) × 5 = 25 хв [Зона 2: 107–125]","thu":"Відпочинок або 10–15 хв легка розтяжка/мобільність","fri":"Хода/біг 30 хв, легко [Зона 1–2: 89–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ: обсяг навмисно нижчий — дайте тілу відновитись."},{"week":5,"phase":"2. Безперервний біг","days":{"mon":"(5 хв біг + 1 хв хода) × 4 = 24 хв [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"(8 хв біг + 2 хв хода) × 2 = 20 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: хода/біг 35 хв [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Перехід до довших бігових відрізків."},{"week":6,"phase":"2. Безперервний біг","days":{"mon":"Безперервний біг 20 хв, повільно [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"(10 хв біг + 2 хв хода) × 2 = 24 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: хода/біг 40 хв [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Перший повністю безперервний біг 20 хв — не женіть темп."},{"week":7,"phase":"2. Безперервний біг","days":{"mon":"Безперервний біг 25 хв [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"(15 хв біг + 2 хв хода) × 2 = 34 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: хода/біг 45 хв [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"Обсяг зростає поступово, у межах правила 10%."},{"week":8,"phase":"2. Безперервний біг","days":{"mon":"Легкий біг 20 хв (розвантаження) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"Легкий біг 25 хв [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий: 35 хв легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":"—","note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ. З наступного тижня переходимо на кілометраж."},{"week":9,"phase":"3. Базовий об'єм","days":{"mon":"4 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"4 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 6 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":6,"note":"Починаємо вимірювати в км. Темп — розмовний, не женіть швидкість."},{"week":10,"phase":"3. Базовий об'єм","days":{"mon":"4 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 7 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":7,"note":"+1 км до довгого забігу — у межах правила 10%."},{"week":11,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 8 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":8,"note":"Тіло вже звикає до регулярного навантаження."},{"week":12,"phase":"3. Базовий об'єм","days":{"mon":"4 км, легко (розвантаження) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"4 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 6 км, легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":6,"note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ перед наступним етапом зростання об'єму."},{"week":13,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"5 км, з них 10 хв бадьоріше в середині [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг 9 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":9,"note":"Вперше додаємо невеликий елемент темпового бігу в середині тижня."},{"week":14,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"6 км, з них 10–12 хв у бадьорому темпі [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг 10 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":10,"note":"Подвійна цифра! 10 км — гарний привід відзначити прогрес."},{"week":15,"phase":"3. Базовий об'єм","days":{"mon":"6 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"6 км, з них 12–15 хв у бадьорому темпі [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг 11 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":11,"note":"Продовжуємо будувати витривалість."},{"week":16,"phase":"3. Базовий об'єм","days":{"mon":"5 км, легко (розвантаження) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 8 км, легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":8,"note":"РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ перед піковим блоком."},{"week":17,"phase":"4. Пік","days":{"mon":"6 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"7 км: інтервали 4×3 хв бадьоріше / 2 хв легко між [Зона 3–4: 125–161]","thu":"Повний відпочинок","fri":"Довгий біг 12 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":12,"note":"Найбільш вимогливий блок плану. Стежте за сном і харчуванням."},{"week":18,"phase":"4. Пік","days":{"mon":"6 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"7 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 14 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":14,"note":"14 км — це вже 2/3 дистанції півмарафону."},{"week":19,"phase":"4. Пік","days":{"mon":"7 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"7 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 16 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":16,"note":"Передостанній довгий забіг. Випробуйте гель/напій, який плануєте на гонці."},{"week":20,"phase":"4. Пік","days":{"mon":"6 км, легко (перед піком — легше) [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"6 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"НАЙДОВШИЙ забіг плану: 18 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":18,"note":"Пік об'єму. Далі йде тейпер — обсяг буде тільки зменшуватись."},{"week":21,"phase":"5. Тейпер","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Силові вправи для бігунів (кор + сідниці + коліна), 20–25 хв — див. лист «Силові вправи»","wed":"6 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 12 км [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":12,"note":"Тейпер розпочато: обсяг знижується, тіло накопичує сили перед стартом."},{"week":22,"phase":"5. Тейпер","days":{"mon":"5 км, легко [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"5 км, легко [Зона 2: 107–125]","thu":"Повний відпочинок","fri":"Довгий біг 8 км, легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":8,"note":"Менше об'єму, та сама регулярність. Довіртесь плану."},{"week":23,"phase":"5. Тейпер","days":{"mon":"4 км, легко [Зона 2: 107–125]","tue":"Відпочинок або 10–15 хв легка розтяжка/мобільність","wed":"4 км, легко + 4×20 сек прискорення [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Довгий біг 5 км, дуже легко [Зона 2: 107–125]","sat":"Відпочинок (вихідний)","sun":"Відпочинок (вихідний)"},"longRunKm":5,"note":"Останній повноцінний тренувальний тиждень перед гонкою."},{"week":24,"phase":"6. Гонка","days":{"mon":"20 хв легкий біг [Зона 2: 107–125]","tue":"Повний відпочинок","wed":"15–20 хв легкий біг + 3–4×20 сек прискорення [Зона 2–3: 107–143]","thu":"Повний відпочинок","fri":"Повний відпочинок або 10 хв хода + розтяжка [Зона 1: 89–107]","sat":"ВИХІДНИЙ (або день гонки, якщо забіг у суботу)","sun":"ГОНКА: ПІВМАРАФОН 21,1 КМ 🏁 (якщо забіг у неділю)"},"longRunKm":"—","note":"ГОНКА: Півмаратон 21,1 км, цільовий темп Зона 3, останні км — Зона 3–4. Сб/Нд — єдиний виняток із вихідних!"}],"totalLongRunKm":150,"zoneImportantNote":"Понад 90% усіх бігових тренувань у цьому плані мають проходити саме в Зоні 1–2 («легко, можу розмовляти»). Це не повільно — це правильно."}</script>
+
 <script>
+/* =====================================================================
+   ЛОГІКА ЗАСТОСУНКУ
+
+   Зміст:
+    0. ⚙ НАЛАШТУВАННЯ (те, що зручно підкручувати)
+    1. Дані та константи
+    2. Стан (state) та сховище
+    3. Допоміжні функції (дати, текст)
+    4. Позиція в плані (дата <-> тиждень/день)
+    5. Контекст «сьогодні» (план / пауза / повернення)  [НОВЕ]
+    6. Логіка паузи та повернення                        [НОВЕ]
+    7. Ініціалізація
+    8. Екран налаштування старту
+    9. Головний екран: прогрес, «Сьогодні», список плану
+   10. Модалка деталей дня
+   11. Вага / Тема / Інфо
+   12. Модалка паузи та повернення                       [НОВЕ]
+   13. Глобальні обробники подій
+   ===================================================================== */
 (function(){
   "use strict";
 
+  /* =================================================================
+     0. ⚙ НАЛАШТУВАННЯ — міняйте тут, решту коду чіпати не потрібно
+     ================================================================= */
+
+  // [НОВЕ] Правила повернення після хвороби.
+  // Береться ПЕРШЕ правило, у якому кількість днів хвороби <= maxSickDays.
+  //   rampSessions  — скільки легких «вхідних» тренувань до повернення в план (0 = без них)
+  //   rollbackWeeks — на скільки тижнів відкотитись назад у плані
+  // Це загальні орієнтири, а не медичні норми.
+  var RECOVERY_RULES = [
+    { maxSickDays: 2,        rampSessions: 0, rollbackWeeks: 0 },  // легка застуда — одразу в план
+    { maxSickDays: 7,        rampSessions: 2, rollbackWeeks: 0 },  // тиждень — 2 легкі виходи
+    { maxSickDays: 14,       rampSessions: 3, rollbackWeeks: 1 },  // 2 тижні — відкат на 1 тиждень
+    { maxSickDays: 28,       rampSessions: 3, rollbackWeeks: 2 },  // до місяця — відкат на 2 тижні
+    { maxSickDays: Infinity, rampSessions: 3, rollbackWeeks: 3 }   // довше — відкат на 3 тижні
+  ];
+
+  // [НОВЕ] Шаблони «вхідних» тренувань. Беруться по порядку (1-ше, 2-ге, 3-тє).
+  // Блок [Зона N: low–high] обов'язковий — числа автоматично перерахуються під ваш макс. пульс.
+  var RAMP_TEMPLATES = [
+    "Повернення після хвороби 1/{N}: спокійна хода 20–25 хв [Зона 1: 89–107]",
+    "Повернення після хвороби 2/{N}: (1 хв легкий біг + 2 хв хода) × 6 = 18 хв [Зона 1–2: 89–125]",
+    "Повернення після хвороби 3/{N}: (2 хв біг + 1 хв хода) × 6 = 18 хв [Зона 2: 107–125]"
+  ];
+  var RAMP_REST_TEXT = "Відпочинок — відновлення після хвороби";
+
+  // [НОВЕ] Максимальний відкат, який можна вибрати вручну (у тижнях)
+  var MAX_MANUAL_ROLLBACK = 4;
+
+  /* =================================================================
+     1. ДАНІ ТА КОНСТАНТИ
+     ================================================================= */
   var PLAN = JSON.parse(document.getElementById('plan-data').textContent);
 
-  // Підставляємо дистанцію довгого забігу в текст п'ятниці (тижні 9+)
-  PLAN.weeks.forEach(function(w){
-    var km = w.longRunKm;
-    var t = w.days.fri || '';
-    if (typeof km === 'number' && !/\d+\s*км/.test(t)){
-      w.days.fri = t.replace(/^(Довгий біг|НАЙДОВШИЙ забіг плану)/, '$1: ' + km + ' км');
-    }
-  });
-
+  // Порядок днів у тижні плану (тиждень плану починається з 'mon' відносно якоря)
   var DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
   var DAY_LABEL_FULL = {mon:'Понеділок',tue:'Вівторок',wed:'Середа',thu:'Четвер',fri:"П'ятниця",sat:'Субота',sun:'Неділя'};
   var DAY_LABEL_SHORT = {mon:'Пн',tue:'Вт',wed:'Ср',thu:'Чт',fri:'Пт',sat:'Сб',sun:'Нд'};
   var MONTHS_GEN = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  var TOTAL_WEEKS = PLAN.weeks.length; // 24
 
+  // Скільки днів у плані мають запис (порожні дні не рахуються у прогрес)
   var TOTAL_TRACKABLE = 0;
   PLAN.weeks.forEach(function(w){
     DAY_KEYS.forEach(function(k){ if ((w.days[k]||'').trim() !== '') TOTAL_TRACKABLE++; });
   });
 
-  var PHASE_COLOR_VARS = {
-    '1': '--phase-1', '2': '--phase-2', '3': '--phase-3',
-    '4': '--phase-4', '5': '--phase-5', '6': '--phase-6'
-  };
+  // Колір кожної фази — через CSS-змінні --phase-N
+  var PHASE_COLOR_VARS = {'1':'--phase-1','2':'--phase-2','3':'--phase-3','4':'--phase-4','5':'--phase-5','6':'--phase-6'};
   function phaseColorVar(phase){
     if (!phase) return '--rest';
     var m = phase.match(/^(\d)/);
     return (m && PHASE_COLOR_VARS[m[1]]) || '--rest';
   }
-
-  // ---------- heart-rate zone math ----------
-  var ZONE_BOUNDS = PLAN.zones.map(function(z){
-    var m = (z.pct||'').match(/(\d+)\s*[–\-]\s*(\d+)\s*%/u);
-    return m ? {low: parseInt(m[1],10)/100, high: parseInt(m[2],10)/100} : {low:0, high:1};
-  });
-  function zoneRangeForZoneStr(zoneStr, maxHR){
-    var parts = String(zoneStr).split(/[–\-]/).map(function(s){ return parseInt(s,10); }).filter(function(n){ return !isNaN(n); });
-    var startZ = parts[0] || 1;
-    var endZ = parts.length > 1 ? parts[1] : startZ;
-    var lowBound = ZONE_BOUNDS[startZ-1] || ZONE_BOUNDS[0];
-    var highBound = ZONE_BOUNDS[endZ-1] || ZONE_BOUNDS[ZONE_BOUNDS.length-1];
-    var low = Math.round(maxHR * lowBound.low);
-    var high = Math.round(maxHR * highBound.high);
-    return low+'\u2013'+high;
-  }
-  // Переписує "[Зона X: NN–MM]" відповідно до поточного maxHR
-  function displayPlanText(text, maxHR){
-    if (!text) return text;
-    return text.replace(/\[Зона\s*([0-9–\-]+):\s*[0-9–\-]+\]/gu, function(full, zoneStr){
-      return '[Зона '+zoneStr+': '+zoneRangeForZoneStr(zoneStr, maxHR)+']';
-    });
-  }
-  function bmiFor(weightKg, heightCm){
-    var hM = heightCm/100;
-    return weightKg / (hM*hM);
-  }
-  function bmiLabelFor(bmi){
-    if (bmi < 18.5) return 'Недостатня вага';
-    if (bmi < 25) return 'Норма';
-    if (bmi < 30) return 'Надлишкова вага';
-    return 'Ожиріння';
-  }
-  function tanakaMaxHR(age){ return 208 - 0.7*age; }
 
   var QUOTES = [
     {text:'Не важливо, як повільно ти рухаєшся — головне, що ти не зупиняєшся.', author:'Народна мудрість бігунів'},
@@ -782,57 +620,137 @@
     {text:'Найсильніший м’яз бігуна — воля повторити це завтра.', author:'Народна мудрість бігунів'}
   ];
 
-  // ---------- storage ----------
+  /* ---------- Розрахунок пульсових зон ---------- */
+  // Межі зон у % від макс. пульсу беруться прямо з PLAN.zones[].pct ("60–70%")
+  var ZONE_BOUNDS = PLAN.zones.map(function(z){
+    var m = (z.pct||'').match(/(\d+)\s*[–\-]\s*(\d+)\s*%/u);
+    return m ? {low: parseInt(m[1],10)/100, high: parseInt(m[2],10)/100} : {low:0, high:1};
+  });
+
+  // "1–2" або "3" + макс. пульс  ->  "89–125"
+  function zoneRangeForZoneStr(zoneStr, maxHR){
+    var parts = String(zoneStr).split(/[–\-]/).map(function(s){ return parseInt(s,10); }).filter(function(n){ return !isNaN(n); });
+    var startZ = parts[0] || 1;
+    var endZ = parts.length > 1 ? parts[1] : startZ;
+    var lowBound = ZONE_BOUNDS[startZ-1] || ZONE_BOUNDS[0];
+    var highBound = ZONE_BOUNDS[endZ-1] || ZONE_BOUNDS[ZONE_BOUNDS.length-1];
+    return Math.round(maxHR * lowBound.low) + '\u2013' + Math.round(maxHR * highBound.high);
+  }
+
+  // Переписує "[Зона X: NN–MM]" у тексті під поточний макс. пульс. Решту тексту не чіпає.
+  function displayPlanText(text, maxHR){
+    if (!text) return text;
+    return text.replace(/\[Зона\s*([0-9–\-]+):\s*[0-9–\-]+\]/gu, function(full, zoneStr){
+      return '[Зона '+zoneStr+': '+zoneRangeForZoneStr(zoneStr, maxHR)+']';
+    });
+  }
+
+  function bmiFor(weightKg, heightCm){ var hM = heightCm/100; return weightKg/(hM*hM); }
+  function bmiLabelFor(bmi){
+    if (bmi < 18.5) return 'Недостатня вага';
+    if (bmi < 25) return 'Норма';
+    if (bmi < 30) return 'Надлишкова вага';
+    return 'Ожиріння';
+  }
+  function tanakaMaxHR(age){ return 208 - 0.7*age; } // формула Танаки
+
+  /* =================================================================
+     2. СТАН ТА СХОВИЩЕ
+     ================================================================= */
+
+  // Обгортка сховища: спочатку window.storage (віджет), інакше localStorage
   var Storage = {
     _hasWidgetStorage: (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function'),
     async get(key){
       if (this._hasWidgetStorage){
-        try{
-          var r = await window.storage.get(key, false);
-          return r ? r.value : null;
-        }catch(e){ /* fall through to localStorage */ }
+        try{ var r = await window.storage.get(key, false); return r ? r.value : null; }catch(e){ /* падаємо в localStorage */ }
       }
       try{ return localStorage.getItem(key); }catch(e){ return null; }
     },
     async set(key, value){
       if (this._hasWidgetStorage){
-        try{ await window.storage.set(key, value, false); return true; }catch(e){ /* fall through */ }
+        try{ await window.storage.set(key, value, false); return true; }catch(e){ /* падаємо в localStorage */ }
       }
       try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
     }
   };
 
-  var K_ANCHOR = 'hm_plan_anchor_v1';
-  var K_DONE = 'hm_plan_done_v1';
+  // Ключі сховища. УВАГА: старі ключі не змінювати — зламається збережений прогрес.
+  var K_ANCHOR = 'hm_plan_anchor_v1';        // календарна дата тижня 1 / «понеділка» плану
+  var K_DONE = 'hm_plan_done_v1';            // виконані дні {"w1-mon": true}
   var K_WEIGHT = 'hm_weight_log_v1';
   var K_START_WEIGHT = 'hm_start_weight_v1';
   var K_GOAL_WEIGHT = 'hm_goal_weight_v1';
   var K_MAXHR = 'hm_max_hr_v1';
   var K_THEME = 'hm_theme_v1';
+  var K_PAUSE = 'hm_pause_v1';               // [НОВЕ] активна пауза або null
+  var K_REENTRY = 'hm_reentry_v1';           // [НОВЕ] активне повернення після хвороби або null
 
   var state = {
-    anchor: null,
-    doneMap: {},
-    selectedWeek: 1,
+    anchor: null,             // Date: календарний день, що відповідає тижню 1 / 'mon'
+    doneMap: {},              // { "w1-mon": true, ... }
+    selectedWeek: 1,          // вибір на екрані налаштування
     selectedDayKey: 'mon',
-    openWeekInList: null,
-    weightLog: [],
+    openWeekInList: null,     // який тиждень розгорнутий у списку (-1 = жоден)
+    weightLog: [],            // [{id, date:'YYYY-MM-DD', weight}]
     startWeight: PLAN.athlete.weight,
     goalWeight: null,
     maxHR: PLAN.athlete.maxHR,
-    theme: 'dark'
+    theme: 'dark',
+
+    // [НОВЕ] Пауза: { start:'YYYY-MM-DD', week:N, dayKey:'mon' }
+    //   start — з якого дня хворіємо; week/dayKey — «заморожена» позиція плану
+    //   (те тренування, до якого повернемось). null = пауза не активна.
+    pause: null,
+
+    // [НОВЕ] Повернення: {
+    //   start:'YYYY-MM-DD',          // день початку повернення
+    //   items:[{text, kind}],        // kind: 'run' | 'rest' — по одному на календарний день
+    //   done:{ "0": true },          // які пункти виконано
+    //   resumeWeek, resumeDayKey     // куди потрапимо в плані після повернення
+    // }
+    reentry: null
   };
 
-  // ---------- helpers ----------
-  function pad2(n){ return (n<10? '0':'') + n; }
+  async function persistAll(){
+    await Storage.set(K_ANCHOR, state.anchor.toISOString());
+    await Storage.set(K_DONE, JSON.stringify(state.doneMap));
+    await persistPauseState();
+  }
+  async function persistDone(){ await Storage.set(K_DONE, JSON.stringify(state.doneMap)); }
+  async function persistAnchor(){ await Storage.set(K_ANCHOR, state.anchor.toISOString()); }
+  async function persistWeight(){ await Storage.set(K_WEIGHT, JSON.stringify(state.weightLog)); }
+  async function persistStartWeight(){ await Storage.set(K_START_WEIGHT, String(state.startWeight)); }
+  async function persistGoalWeight(){ await Storage.set(K_GOAL_WEIGHT, state.goalWeight == null ? '' : String(state.goalWeight)); }
+  async function persistMaxHR(){ await Storage.set(K_MAXHR, String(state.maxHR)); }
+  async function persistTheme(){ await Storage.set(K_THEME, state.theme); }
+  async function persistPauseState(){
+    await Storage.set(K_PAUSE, state.pause ? JSON.stringify(state.pause) : '');
+    await Storage.set(K_REENTRY, state.reentry ? JSON.stringify(state.reentry) : '');
+  }
+
+  /* =================================================================
+     3. ДОПОМІЖНІ ФУНКЦІЇ
+     ================================================================= */
+  function pad2(n){ return (n<10 ? '0' : '') + n; }
+  function dateKey(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  // 'YYYY-MM-DD' -> Date (локальна північ, без зсуву часових поясів)
+  function dateFromKey(s){ var p = s.split('-'); return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10)); }
   function startOfDay(d){ var x = new Date(d); x.setHours(0,0,0,0); return x; }
   function addDays(d, n){ var x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  // Різниця в календарних днях (b - a). Math.round захищає від переходу на літній/зимовий час.
+  function daysBetween(a, b){ return Math.round((startOfDay(b) - startOfDay(a)) / 86400000); }
   function formatDateLong(d){ return d.getDate()+' '+MONTHS_GEN[d.getMonth()]; }
+  function formatDateWithYear(d){ return formatDateLong(d)+' '+d.getFullYear(); }
+  function todayDateInputValue(){ return dateKey(new Date()); }
+  function formatDateShort(iso){ return formatDateLong(dateFromKey(iso)); }
+
   function escapeHtml(s){
     return (s||'').replace(/[&<>"']/g, function(c){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
   }
+  // Українська множина: 1 раз, 2 рази, 5 разів
   function pluralRaz(n){
     n = parseInt(n,10);
     var m10 = n % 10, m100 = n % 100;
@@ -840,8 +758,22 @@
     if (m10 >= 2 && m10 <= 4 && !(m100 >= 12 && m100 <= 14)) return 'рази';
     return 'разів';
   }
+  // [НОВЕ] 1 день, 2 дні, 5 днів
+  function pluralDays(n){
+    n = Math.abs(parseInt(n,10));
+    var m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'день';
+    if (m10 >= 2 && m10 <= 4 && !(m100 >= 12 && m100 <= 14)) return 'дні';
+    return 'днів';
+  }
+  // Ключ запису про виконання: "w3-wed"
   function itemKey(week, dayKey){ return 'w'+week+'-'+dayKey; }
+  // Порядковий номер дня в плані 0..167
+  function planIndex(week, dayKey){ return (week-1)*7 + DAY_KEYS.indexOf(dayKey); }
+  // Зворотнє перетворення: індекс -> {week, dayKey}
+  function positionFromIndex(idx){ return { week: Math.floor(idx/7)+1, dayKey: DAY_KEYS[((idx%7)+7)%7] }; }
 
+  // Тип дня за текстом (впливає на підпис і вміст модалки)
   function classifyDay(text){
     var t = (text||'').trim();
     if (t === '') return 'blank';
@@ -853,46 +785,54 @@
     return 'run';
   }
   function typeLabel(type){
-    return {
-      run:'Тренування', long:'Довгий забіг', strength:'Силові вправи',
-      'rest-full':'День відпочинку', 'rest-light':'Легкий день', race:'День гонки', blank:'Вільний день'
-    }[type] || 'Тренування';
+    return {run:'Тренування', long:'Довгий забіг', strength:'Силові вправи', 'rest-full':'День відпочинку', 'rest-light':'Легкий день', race:'День гонки', blank:'Вільний день'}[type] || 'Тренування';
   }
+  // "[Зона 1–2: 89–125]" -> {zone:'1–2', range:'89–125'}
   function parseZone(text){
     var m = (text||'').match(/\[Зона\s*([0-9–\-]+):\s*([0-9–\-]+)\]/u);
-    if (!m) return null;
-    return {zone:m[1], range:m[2]};
+    return m ? {zone:m[1], range:m[2]} : null;
   }
+  // "(1 хв біг + 2 хв хода) × 8" -> {inner, count}
   function parseIntervalStructure(text){
     var m = (text||'').match(/\(([^)]+)\)\s*[×x]\s*(\d+)/u);
-    if (!m) return null;
-    return {inner:m[1].trim(), count:m[2]};
+    return m ? {inner:m[1].trim(), count:m[2]} : null;
   }
   function findSafety(keyword){
     return PLAN.safety.find(function(s){ return s.title.indexOf(keyword) !== -1; });
   }
+  function isBlankDay(week, dayKey){ return ((PLAN.weeks[week-1] || {days:{}}).days[dayKey]||'').trim() === ''; }
 
-  // ---------- date <-> plan position ----------
+  /* =================================================================
+     4. ПОЗИЦІЯ В ПЛАНІ (дата <-> тиждень/день)
+     Ідея: зберігаємо лише «якір» (anchor) — календарну дату першого дня плану.
+     Усе інше рахується від нього. Тому пауза = зсув якоря (див. секцію 6).
+     ================================================================= */
+
+  // Яка позиція в плані відповідає даті (відносно поточного якоря)
   function planPositionForDate(d){
-    var diffDays = Math.round((startOfDay(d) - state.anchor) / 86400000);
+    var diffDays = daysBetween(state.anchor, d);
     var week = Math.floor(diffDays/7) + 1;
     var dayIdx = ((diffDays % 7) + 7) % 7;
-    return {week:week, dayKey:DAY_KEYS[dayIdx], diffDays:diffDays};
+    return {week: week, dayKey: DAY_KEYS[dayIdx], diffDays: diffDays};
   }
-  function dateForPosition(week, dayKeyStr){
-    var dayIdx = DAY_KEYS.indexOf(dayKeyStr);
-    var offset = (week-1)*7 + dayIdx;
-    return addDays(state.anchor, offset);
+  // Яка календарна дата відповідає позиції. anchorOverride — для прогнозу (напр., дата гонки після паузи)
+  function dateForPosition(week, dayKey, anchorOverride){
+    return addDays(anchorOverride || state.anchor, planIndex(week, dayKey));
+  }
+  // Якір так, щоб «сьогодні» = обрана позиція
+  function computeAnchorFromSelection(week, dayKey){
+    return addDays(startOfDay(new Date()), -planIndex(week, dayKey));
   }
 
-  // Позначає всі тренування до поточної позиції як виконані (нічого не знімає)
+  // Позначає всі дні ДО поточної позиції виконаними (для старту «з середини» плану).
+  // Нічого не знімає — лише заповнює пропуски.
   function autoFillPastAsDone(){
     var pos = planPositionForDate(new Date());
     var todayIdx = DAY_KEYS.indexOf(pos.dayKey);
     var changed = false;
-    for (var w=1; w<=24; w++){
+    for (var w=1; w<=TOTAL_WEEKS; w++){
       var wk = PLAN.weeks[w-1];
-      for (var i=0;i<DAY_KEYS.length;i++){
+      for (var i=0; i<DAY_KEYS.length; i++){
         var isBefore = (w < pos.week) || (w === pos.week && i < todayIdx);
         if (!isBefore) continue;
         var k = DAY_KEYS[i];
@@ -904,14 +844,186 @@
     return changed;
   }
 
-  function computeAnchorFromSelection(week, dayKeyStr){
-    var today = startOfDay(new Date());
-    var dayIdx = DAY_KEYS.indexOf(dayKeyStr);
-    var offset = (week-1)*7 + dayIdx;
-    return addDays(today, -offset);
+  /* =================================================================
+     5. [НОВЕ] КОНТЕКСТ «СЬОГОДНІ»
+     Єдина точка правди: у якому режимі зараз застосунок.
+       'plan'       — звичайний день плану
+       'paused'     — пауза (хвороба), план заморожено
+       'reentry'    — легкі тренування після хвороби
+       'finished'   — план завершено
+       'notstarted' — початок плану ще попереду
+     Усі екрани (Сьогодні, список, налаштування) беруть режим звідси.
+     ================================================================= */
+  function getTodayContext(){
+    // 1) Пауза має найвищий пріоритет
+    if (state.pause){
+      return {mode:'paused', week: state.pause.week, dayKey: state.pause.dayKey};
+    }
+    // 2) Повернення після хвороби
+    if (state.reentry){
+      var idx = daysBetween(dateFromKey(state.reentry.start), new Date());
+      if (idx >= 0 && idx < state.reentry.items.length){
+        return {
+          mode:'reentry', index: idx, item: state.reentry.items[idx],
+          week: state.reentry.resumeWeek, dayKey: state.reentry.resumeDayKey
+        };
+      }
+    }
+    // 3) Звичайний режим
+    var pos = planPositionForDate(new Date());
+    if (pos.week > TOTAL_WEEKS) return {mode:'finished', week: TOTAL_WEEKS, dayKey: pos.dayKey};
+    if (pos.week < 1) return {mode:'notstarted', week: 1, dayKey: pos.dayKey};
+    return {mode:'plan', week: pos.week, dayKey: pos.dayKey};
   }
 
-  // ---------- init ----------
+  /* =================================================================
+     6. [НОВЕ] ЛОГІКА ПАУЗИ ТА ПОВЕРНЕННЯ
+
+     Як це працює (коротко):
+       ПАУЗА:    запам'ятовуємо дату початку хвороби та позицію плану (week/dayKey).
+                 Поки пауза активна — позиція не змінюється, «Сьогодні» показує картку паузи.
+       ПОВЕРНЕННЯ: рахуємо тривалість хвороби -> за RECOVERY_RULES обираємо
+                 (а) скільки легких «вхідних» тренувань, (б) на скільки тижнів відкотитись.
+                 Потім ЗСУВАЄМО ЯКІР так, щоб після вхідних тренувань
+                 «сьогодні» потрапило рівно на позицію повернення.
+                 Через це решта плану (і дата гонки) автоматично зсувається.
+       ВІДКАТ:   тренування в тижнях, які доведеться повторити, знімаються з виконаних.
+     ================================================================= */
+
+  // Правило за кількістю днів хвороби
+  function recoveryRuleFor(sickDays){
+    for (var i=0; i<RECOVERY_RULES.length; i++){
+      if (sickDays <= RECOVERY_RULES[i].maxSickDays) return RECOVERY_RULES[i];
+    }
+    return RECOVERY_RULES[RECOVERY_RULES.length-1];
+  }
+
+  // Будує список «вхідних» днів: тренування, відпочинок, тренування, ...
+  // Для N сесій виходить 2N-1 календарних днів.
+  function buildRampItems(sessions){
+    var items = [];
+    for (var s=0; s<sessions; s++){
+      if (s > 0) items.push({text: RAMP_REST_TEXT, kind:'rest'});
+      var tpl = RAMP_TEMPLATES[Math.min(s, RAMP_TEMPLATES.length-1)];
+      items.push({text: tpl.replace('{N}', String(sessions)), kind:'run'});
+    }
+    return items;
+  }
+
+  // Наступний день у плані (для випадку, коли сьогоднішнє тренування вже виконане)
+  function nextPosition(week, dayKey){
+    var idx = Math.min(planIndex(week, dayKey) + 1, TOTAL_WEEKS*7 - 1);
+    return positionFromIndex(idx);
+  }
+
+  // Розраховує все, що потрібно для повернення (і для прев'ю в модалці, і для підтвердження).
+  // Нічого не змінює в state — тільки повертає результат.
+  function computeResumePreview(rollbackWeeks){
+    var pp = state.pause;
+    var today = startOfDay(new Date());
+    var sickDays = Math.max(0, daysBetween(dateFromKey(pp.start), today));
+    var rule = recoveryRuleFor(sickDays);
+
+    var rollback = (rollbackWeeks == null) ? rule.rollbackWeeks : rollbackWeeks;
+    rollback = Math.max(0, Math.min(rollback, pp.week - 1)); // не глибше за тиждень 1
+
+    var resumeWeek = pp.week - rollback;
+    var resumeDayKey = pp.dayKey;
+    var rampItems = buildRampItems(rule.rampSessions);
+
+    // Якір: через rampItems.length днів від сьогодні має бути позиція (resumeWeek, resumeDayKey)
+    var newAnchor = addDays(today, rampItems.length - planIndex(resumeWeek, resumeDayKey));
+
+    // Які виконані дні доведеться «розвиконати» (ті, що будемо повторювати)
+    var undoKeys = [];
+    for (var i = planIndex(resumeWeek, resumeDayKey); i < planIndex(pp.week, pp.dayKey); i++){
+      var p = positionFromIndex(i);
+      var key = itemKey(p.week, p.dayKey);
+      if (state.doneMap[key]) undoKeys.push(key);
+    }
+
+    // Прогноз дати гонки: було / стане
+    var raceBefore = dateForPosition(TOTAL_WEEKS, 'sun', state.anchor);
+    var raceAfter = dateForPosition(TOTAL_WEEKS, 'sun', newAnchor);
+
+    return {
+      sickDays: sickDays, rule: rule, rollback: rollback,
+      resumeWeek: resumeWeek, resumeDayKey: resumeDayKey,
+      rampItems: rampItems, newAnchor: newAnchor, undoKeys: undoKeys,
+      raceBefore: raceBefore, raceAfter: raceAfter,
+      raceShiftDays: daysBetween(raceBefore, raceAfter)
+    };
+  }
+
+  // ПАУЗА: зафіксувати позицію й дату початку хвороби
+  async function startPause(startDateStr){
+    var ctx = getTodayContext();
+    var pos, startKey;
+
+    if (ctx.mode === 'reentry'){
+      // Захворіли знову під час повернення: замораживаємо ту позицію, куди збиралися повертатись
+      pos = {week: state.reentry.resumeWeek, dayKey: state.reentry.resumeDayKey};
+      startKey = todayDateInputValue();
+      state.reentry = null;
+    } else {
+      var startDate = dateFromKey(startDateStr || todayDateInputValue());
+      var p = planPositionForDate(startDate);
+      // Захист: не виходимо за межі плану
+      if (p.week < 1){ p = {week:1, dayKey:'mon'}; }
+      if (p.week > TOTAL_WEEKS){ p = {week:TOTAL_WEEKS, dayKey:'sun'}; }
+      pos = {week: p.week, dayKey: p.dayKey};
+      // Якщо тренування цього дня вже позначене виконаним — замораживаємося на наступному
+      if (state.doneMap[itemKey(pos.week, pos.dayKey)]){
+        pos = nextPosition(pos.week, pos.dayKey);
+      }
+      startKey = dateKey(startDate);
+    }
+
+    state.pause = {start: startKey, week: pos.week, dayKey: pos.dayKey};
+    state.openWeekInList = pos.week;
+    await persistPauseState();
+  }
+
+  // ПОВЕРНЕННЯ: застосувати результат computeResumePreview()
+  async function confirmResume(rollbackWeeks){
+    var r = computeResumePreview(rollbackWeeks);
+
+    // 1) Зняти «виконано» з тижнів, які повторюємо
+    r.undoKeys.forEach(function(key){ delete state.doneMap[key]; });
+
+    // 2) Зсунути якір
+    state.anchor = r.newAnchor;
+
+    // 3) Запустити «вхідні» тренування (якщо вони передбачені правилом)
+    state.reentry = r.rampItems.length ? {
+      start: todayDateInputValue(),
+      items: r.rampItems,
+      done: {},
+      resumeWeek: r.resumeWeek,
+      resumeDayKey: r.resumeDayKey
+    } : null;
+
+    // 4) Вийти з паузи
+    state.pause = null;
+    state.openWeekInList = r.resumeWeek;
+
+    await persistAnchor();
+    await persistDone();
+    await persistPauseState();
+  }
+
+  // Позначка «виконано» для вхідного тренування
+  async function toggleReentryDone(index){
+    if (!state.reentry) return;
+    var k = String(index);
+    state.reentry.done[k] = !state.reentry.done[k];
+    await persistPauseState();
+    renderToday();
+  }
+
+  /* =================================================================
+     7. ІНІЦІАЛІЗАЦІЯ
+     ================================================================= */
   async function init(){
     var anchorStr = await Storage.get(K_ANCHOR);
     var doneStr = await Storage.get(K_DONE);
@@ -920,12 +1032,23 @@
     var goalWeightStr = await Storage.get(K_GOAL_WEIGHT);
     var maxHrStr = await Storage.get(K_MAXHR);
     var themeStr = await Storage.get(K_THEME);
+    var pauseStr = await Storage.get(K_PAUSE);
+    var reentryStr = await Storage.get(K_REENTRY);
+
     if (doneStr){ try{ state.doneMap = JSON.parse(doneStr); }catch(e){ state.doneMap = {}; } }
     if (weightStr){ try{ state.weightLog = JSON.parse(weightStr); }catch(e){ state.weightLog = []; } }
     if (startWeightStr){ var sw = parseFloat(startWeightStr); if (!isNaN(sw)) state.startWeight = sw; }
     if (goalWeightStr){ var gw = parseFloat(goalWeightStr); if (!isNaN(gw)) state.goalWeight = gw; }
     if (maxHrStr){ var mh = parseFloat(maxHrStr); if (!isNaN(mh)) state.maxHR = mh; }
     if (themeStr){ state.theme = themeStr; }
+    if (pauseStr){ try{ state.pause = JSON.parse(pauseStr) || null; }catch(e){ state.pause = null; } }
+    if (reentryStr){ try{ state.reentry = JSON.parse(reentryStr) || null; }catch(e){ state.reentry = null; } }
+
+    // Прибирання: якщо вікно «вхідних» тренувань уже минуло — забуваємо про нього
+    if (state.reentry){
+      var ri = daysBetween(dateFromKey(state.reentry.start), new Date());
+      if (ri >= state.reentry.items.length){ state.reentry = null; await persistPauseState(); }
+    }
 
     applyTheme(state.theme);
     startClock();
@@ -942,43 +1065,31 @@
     state.theme = themeId;
     document.body.setAttribute('data-theme', themeId);
   }
-  async function persistTheme(){
-    await Storage.set(K_THEME, state.theme);
-  }
 
-  function startClock(){
-    updateClock();
-    setInterval(updateClock, 1000);
-  }
+  // Годинник у шапці
+  function startClock(){ updateClock(); setInterval(updateClock, 1000); }
   function updateClock(){
     var el = document.getElementById('topbar-clock');
     if (!el) return;
     var now = new Date();
-    var dayIdx = (now.getDay()+6)%7;
-    var dayName = DAY_LABEL_FULL[DAY_KEYS[dayIdx]];
-    var dateStr = formatDateLong(now);
-    var timeStr = pad2(now.getHours())+':'+pad2(now.getMinutes());
-    el.innerHTML = '<span class="clock-dot"></span>'+dayName+', '+dateStr+' · '+timeStr;
+    var dayName = DAY_LABEL_FULL[DAY_KEYS[(now.getDay()+6)%7]]; // getDay: нд=0 -> перетворюємо на пн=0
+    el.innerHTML = '<span class="clock-dot"></span>'+dayName+', '+formatDateLong(now)+' · '+pad2(now.getHours())+':'+pad2(now.getMinutes());
   }
 
-  async function persistDone(){ await Storage.set(K_DONE, JSON.stringify(state.doneMap)); }
-  async function persistAnchor(){ await Storage.set(K_ANCHOR, state.anchor.toISOString()); }
-  async function persistWeight(){ await Storage.set(K_WEIGHT, JSON.stringify(state.weightLog)); }
-  async function persistStartWeight(){ await Storage.set(K_START_WEIGHT, String(state.startWeight)); }
-  async function persistGoalWeight(){ await Storage.set(K_GOAL_WEIGHT, state.goalWeight == null ? '' : String(state.goalWeight)); }
-  async function persistMaxHR(){ await Storage.set(K_MAXHR, String(state.maxHR)); }
-
-  // ================= SETUP SCREEN =================
+  /* =================================================================
+     8. ЕКРАН НАЛАШТУВАННЯ СТАРТУ
+     ================================================================= */
   function showSetup(isReconfigure){
     document.getElementById('screen-app').style.display = 'none';
     var root = document.getElementById('screen-setup');
     root.style.display = 'block';
 
+    // Що підсвітити за замовчуванням
     var prefillWeek = 1, prefillDay = 'mon';
     if (isReconfigure && state.anchor){
-      var pos = planPositionForDate(new Date());
-      prefillWeek = Math.min(24, Math.max(1, pos.week));
-      prefillDay = pos.dayKey;
+      var ctx = getTodayContext();
+      prefillWeek = Math.min(TOTAL_WEEKS, Math.max(1, ctx.week));
+      prefillDay = ctx.dayKey;
     }
     state.selectedWeek = prefillWeek;
     state.selectedDayKey = prefillDay;
@@ -986,13 +1097,11 @@
     var a = PLAN.athlete;
 
     var weekChips = '';
-    for (var w=1; w<=24; w++){
-      var wk = PLAN.weeks[w-1];
-      var cvar = phaseColorVar(wk.phase);
+    for (var w=1; w<=TOTAL_WEEKS; w++){
+      var cvar = phaseColorVar(PLAN.weeks[w-1].phase);
       weekChips += '<div class="week-chip'+(w===prefillWeek?' selected':'')+'" data-week="'+w+'">' +
         '<span>'+w+'</span><span class="dot" style="background:var('+cvar+')"></span></div>';
     }
-
     var dayChips = '';
     DAY_KEYS.forEach(function(k){
       dayChips += '<div class="day-chip'+(k===prefillDay?' selected':'')+'" data-day="'+k+'">'+DAY_LABEL_SHORT[k]+'</div>';
@@ -1002,13 +1111,15 @@
       '<div class="setup-hero">' +
         '<div class="setup-kicker">ПЛАН ПІДГОТОВКИ · 21,1 КМ · 24 ТИЖНІ</div>' +
         '<h1 class="setup-title">Ваш шлях до півмарафону</h1>' +
-        '<p class="setup-sub">'+(isReconfigure ? 'Змініть, з якого тижня й дня рахувати ваш план, свою вагу чи пульсові зони. Прогрес виконаних тренувань збережеться.' : 'Ви трохи бігаєте, тож немає сенсу починати з нуля. Оберіть тиждень і день плану, які відповідають сьогоднішньому дню — і програма сама розкладе решту тренувань за календарем.')+'</p>' +
+        '<p class="setup-sub">'+(isReconfigure
+          ? 'Змініть, з якого тижня й дня рахувати ваш план, свою вагу чи пульсові зони. Прогрес виконаних тренувань збережеться.'
+          : 'Ви трохи бігаєте, тож немає сенсу починати з нуля. Оберіть тиждень і день плану, які відповідають сьогоднішньому дню — і програма сама розкладе решту тренувань за календарем.')+'</p>' +
       '</div>' +
       '<div class="setup-profile">' +
         '<div class="setup-profile-cell"><div class="setup-profile-val">'+a.age+'</div><div class="setup-profile-key">років</div></div>' +
         '<div class="setup-profile-cell"><div class="setup-profile-val">'+a.height+'</div><div class="setup-profile-key">зріст, см</div></div>' +
-        '<div class="setup-profile-cell editable"><input class="setup-profile-input" type="number" id="setup-weight-input" step="0.1" min="30" max="300" value="'+state.startWeight+'"><div class="setup-profile-key hint">вага, кг</div></div>' +
-        '<div class="setup-profile-cell editable"><input class="setup-profile-input" type="number" id="setup-maxhr-input-mini" step="0.1" min="100" max="220" value="'+state.maxHR.toFixed(1)+'"><div class="setup-profile-key hint">макс. пульс</div></div>' +
+        '<div class="setup-profile-cell"><input class="setup-profile-input" type="number" id="setup-weight-input" step="0.1" min="30" max="300" value="'+state.startWeight+'"><div class="setup-profile-key hint">вага, кг</div></div>' +
+        '<div class="setup-profile-cell"><input class="setup-profile-input" type="number" id="setup-maxhr-input-mini" step="0.1" min="100" max="220" value="'+state.maxHR.toFixed(1)+'"><div class="setup-profile-key hint">макс. пульс</div></div>' +
       '</div>' +
       '<div class="setup-section">' +
         '<div class="setup-section-title">З якого тижня почати?</div>' +
@@ -1036,6 +1147,7 @@
         (isReconfigure ? '<button class="setup-link" id="setup-cancel-btn">Скасувати</button>' : '<button class="setup-link" id="setup-info-btn">Переглянути рекомендації лікарів і тренерів</button>') +
       '</div>';
 
+    // Вибір тижня / дня
     root.querySelectorAll('.week-chip').forEach(function(el){
       el.addEventListener('click', function(){
         root.querySelectorAll('.week-chip').forEach(function(c){ c.classList.remove('selected'); });
@@ -1053,12 +1165,14 @@
       });
     });
 
+    // Вага
     var weightInput = document.getElementById('setup-weight-input');
     weightInput.addEventListener('input', function(){
       var v = parseFloat(weightInput.value);
       if (!isNaN(v)) state.startWeight = v;
     });
 
+    // Макс. пульс: два поля синхронізуються між собою
     var maxHrMain = document.getElementById('setup-maxhr-input');
     var maxHrMini = document.getElementById('setup-maxhr-input-mini');
     function syncMaxHR(v, source){
@@ -1072,17 +1186,21 @@
     maxHrMain.addEventListener('input', function(){ syncMaxHR(parseFloat(maxHrMain.value), 'main'); });
     maxHrMini.addEventListener('input', function(){ syncMaxHR(parseFloat(maxHrMini.value), 'mini'); });
     document.getElementById('maxhr-reset-btn').addEventListener('click', function(){
-      var def = Math.round(tanakaMaxHR(a.age)*10)/10;
-      syncMaxHR(def, null);
+      syncMaxHR(Math.round(tanakaMaxHR(a.age)*10)/10, null);
     });
 
+    // Збереження вибору
     document.getElementById('setup-start-btn').addEventListener('click', async function(){
       state.anchor = computeAnchorFromSelection(state.selectedWeek, state.selectedDayKey);
+      // [НОВЕ] Новий старт скасовує активну паузу/повернення — інакше позиції були б суперечливі
+      state.pause = null;
+      state.reentry = null;
       autoFillPastAsDone();
       await persistAnchor();
       await persistDone();
       await persistStartWeight();
       await persistMaxHR();
+      await persistPauseState();
       showApp();
     });
     if (isReconfigure){
@@ -1100,10 +1218,9 @@
     var dotVars = ['--rest','--phase-2','--phase-3','--phase-6','--danger'];
     var html = '';
     PLAN.zones.forEach(function(z, i){
-      var range = zoneRangeForZoneStr(String(i+1), state.maxHR);
       html += '<div class="zone-calc-row">' +
         '<span class="zone-calc-name"><span class="zone-calc-dot" style="background:var('+(dotVars[i]||'--rest')+')"></span>'+escapeHtml(z.name)+' ('+z.pct+')</span>' +
-        '<span class="zone-calc-range">'+range+' уд/хв</span>' +
+        '<span class="zone-calc-range">'+zoneRangeForZoneStr(String(i+1), state.maxHR)+' уд/хв</span>' +
       '</div>';
     });
     el.innerHTML = html;
@@ -1113,23 +1230,23 @@
     var wk = PLAN.weeks[state.selectedWeek-1];
     var rawText = wk.days[state.selectedDayKey] || 'вільний день (без запису в плані)';
     var text = displayPlanText(rawText, state.maxHR);
-    var pastNote = state.selectedWeek > 1 || state.selectedDayKey !== 'mon'
-      ? ' Усі тренування до цього моменту програма позначить як вже виконані.'
-      : '';
+    var pastNote = (state.selectedWeek > 1 || state.selectedDayKey !== 'mon')
+      ? ' Усі тренування до цього моменту програма позначить як вже виконані.' : '';
     document.getElementById('setup-preview').innerHTML =
       'Сьогодні — <strong>тиждень '+state.selectedWeek+', '+DAY_LABEL_FULL[state.selectedDayKey].toLowerCase()+'</strong> («'+escapeHtml(wk.phase)+'»): '+escapeHtml(text)+pastNote;
   }
 
-  // ================= MAIN APP =================
+  /* =================================================================
+     9. ГОЛОВНИЙ ЕКРАН
+     ================================================================= */
   function showApp(){
     document.getElementById('screen-setup').style.display = 'none';
     document.getElementById('screen-app').style.display = 'block';
     renderQuote();
-    renderProgress();
-    renderToday();
-    renderPlanList();
+    renderAll();
     bindAppEventsOnce();
   }
+  function renderAll(){ renderProgress(); renderToday(); renderPlanList(); }
 
   function renderQuote(){
     var q = QUOTES[Math.floor(Math.random()*QUOTES.length)];
@@ -1137,54 +1254,57 @@
     document.getElementById('quote-author').textContent = '— '+q.author;
   }
 
+  function countDone(){
+    var n = 0;
+    Object.keys(state.doneMap).forEach(function(k){ if (state.doneMap[k]) n++; });
+    return n;
+  }
+
+  // «Дорога» з бігуном
   function renderProgress(){
-    var done = 0;
-    Object.keys(state.doneMap).forEach(function(k){ if (state.doneMap[k]) done++; });
+    var done = countDone();
     var pct = TOTAL_TRACKABLE ? Math.min(100, (done/TOTAL_TRACKABLE)*100) : 0;
     document.getElementById('road-fill').style.width = pct + '%';
     document.getElementById('road-runner').style.left = pct + '%';
     document.getElementById('road-marker').style.left = pct + '%';
     document.getElementById('road-pct').textContent = Math.round(pct) + '%';
     document.getElementById('road-stats-main').innerHTML = '<strong>'+done+'</strong> / '+TOTAL_TRACKABLE+' тренувань виконано';
-    var km = (21.1 * pct/100).toFixed(1);
-    document.getElementById('road-stats-km').textContent = km+' км умовного шляху з 21,1 км';
+    document.getElementById('road-stats-km').textContent = (21.1 * pct/100).toFixed(1)+' км умовного шляху з 21,1 км';
   }
 
-  function currentPosition(){
-    return planPositionForDate(new Date());
-  }
-
+  /* ---------- Вкладка «Сьогодні» ---------- */
   function renderToday(){
     var panel = document.getElementById('panel-today');
-    var pos = currentPosition();
+    var ctx = getTodayContext();
 
-    if (pos.week > 24){
-      panel.innerHTML =
-        '<div class="finished-card">' +
-          '<h2>🏁 План завершено</h2>' +
-          '<p>Ви пройшли всі 24 тижні підготовки. Час фінішної прямої — довіртесь тренуванням, вийдіть на старт і насолоджуйтесь кожним кілометром.</p>' +
-        '</div>';
+    if (ctx.mode === 'finished'){
+      panel.innerHTML = '<div class="finished-card"><h2>🏁 План завершено</h2><p>Ви пройшли всі 24 тижні підготовки. Час фінішної прямої — довіртесь тренуванням, вийдіть на старт і насолоджуйтесь кожним кілометром.</p></div>';
       return;
     }
-    if (pos.week < 1){
+    if (ctx.mode === 'notstarted'){
       panel.innerHTML = '<div class="finished-card"><h2>Ще не почалось</h2><p>За вашими налаштуваннями перший день плану ще попереду.</p></div>';
       return;
     }
+    if (ctx.mode === 'paused'){ renderTodayPaused(panel, ctx); return; }
+    if (ctx.mode === 'reentry'){ renderTodayReentry(panel, ctx); return; }
+    renderTodayPlan(panel, ctx);
+  }
 
-    var wk = PLAN.weeks[pos.week-1];
-    var text = wk.days[pos.dayKey] || '';
+  // Звичайний день плану
+  function renderTodayPlan(panel, ctx){
+    var wk = PLAN.weeks[ctx.week-1];
+    var text = wk.days[ctx.dayKey] || '';
     var displayText = displayPlanText(text, state.maxHR);
     var type = classifyDay(text);
     var zone = parseZone(text);
-    var done = !!state.doneMap[itemKey(pos.week, pos.dayKey)];
+    var done = !!state.doneMap[itemKey(ctx.week, ctx.dayKey)];
     var cvar = phaseColorVar(wk.phase);
-    var today = new Date();
 
     panel.innerHTML =
       '<div class="today-meta">' +
         '<div class="today-date-block">' +
-          '<div class="today-weekday">'+DAY_LABEL_FULL[pos.dayKey]+'</div>' +
-          '<div class="today-date">'+formatDateLong(today)+' · тиждень '+pos.week+'</div>' +
+          '<div class="today-weekday">'+DAY_LABEL_FULL[ctx.dayKey]+'</div>' +
+          '<div class="today-date">'+formatDateLong(new Date())+' · тиждень '+ctx.week+'</div>' +
         '</div>' +
         '<div class="phase-tag"><span class="phase-dot" style="background:var('+cvar+')"></span>'+escapeHtml(wk.phase)+'</div>' +
       '</div>' +
@@ -1198,43 +1318,96 @@
         '<button class="btn btn-ghost" id="today-detail-btn">Детальніше</button>' +
         '<button class="btn '+(done?'btn-done-state':'')+'" id="today-done-btn">'+(done ? '✓ Виконано' : 'Позначити виконаним')+'</button>' +
       '</div>' +
+      // [НОВЕ] Кнопка паузи
+      '<button class="btn btn-warn btn-block" id="today-pause-btn">🤒 Захворів — призупинити план</button>' +
       (wk.note ? '<div class="today-note"><strong>Фокус тижня:</strong> '+escapeHtml(wk.note)+'</div>' : '');
 
-    document.getElementById('today-card').addEventListener('click', function(){ openDetailModal(pos.week, pos.dayKey); });
-    document.getElementById('today-detail-btn').addEventListener('click', function(e){ e.stopPropagation(); openDetailModal(pos.week, pos.dayKey); });
-    document.getElementById('today-done-btn').addEventListener('click', function(e){
-      e.stopPropagation();
-      toggleDone(pos.week, pos.dayKey);
-    });
+    document.getElementById('today-card').addEventListener('click', function(){ openDetailModal(ctx.week, ctx.dayKey); });
+    document.getElementById('today-detail-btn').addEventListener('click', function(e){ e.stopPropagation(); openDetailModal(ctx.week, ctx.dayKey); });
+    document.getElementById('today-done-btn').addEventListener('click', function(e){ e.stopPropagation(); toggleDone(ctx.week, ctx.dayKey); });
+    document.getElementById('today-pause-btn').addEventListener('click', function(){ openPauseModal(); });
   }
 
-  async function toggleDone(week, dayKeyStr){
-    var key = itemKey(week, dayKeyStr);
-    var wk = PLAN.weeks[week-1];
-    if ((wk.days[dayKeyStr]||'').trim() === '') return;
+  // [НОВЕ] Картка «План на паузі»
+  function renderTodayPaused(panel, ctx){
+    var since = dateFromKey(state.pause.start);
+    var days = Math.max(0, daysBetween(since, new Date()));
+    var wk = PLAN.weeks[ctx.week-1];
+    panel.innerHTML =
+      '<div class="pause-card">' +
+        '<div class="pause-card-title">🤒 План на паузі</div>' +
+        '<p class="pause-card-text">Хвороба з <strong>'+formatDateLong(since)+'</strong>' +
+          (days > 0 ? ' · <strong>'+days+' '+pluralDays(days)+'</strong>' : '') + '. ' +
+          'Нічого не поспішайте: прогрес збережено, дні плану не спливають.</p>' +
+        '<p class="pause-card-text" style="margin-top:10px;">Зупинились на: <strong>тиждень '+ctx.week+', '+DAY_LABEL_FULL[ctx.dayKey].toLowerCase()+'</strong> («'+escapeHtml(wk.phase)+'»).</p>' +
+        '<button class="btn btn-primary btn-block" id="resume-btn">Я одужав — повернутися до плану</button>' +
+      '</div>' +
+      '<div class="today-note"><strong>Поки хворієте:</strong> відпочивайте й не тренуйтесь. Повертайтесь, коли немає температури та симптомів «нижче шиї» (кашель з мокротою, біль у грудях, задишка). Сумніваєтесь — спершу до лікаря.</div>';
+    document.getElementById('resume-btn').addEventListener('click', openResumeModal);
+  }
+
+  // [НОВЕ] Картка «Повернення після хвороби»
+  function renderTodayReentry(panel, ctx){
+    var item = ctx.item;
+    var isRun = item.kind === 'run';
+    var zone = parseZone(item.text);
+    var done = !!state.reentry.done[String(ctx.index)];
+    var resumeWk = PLAN.weeks[state.reentry.resumeWeek-1];
+    var stop = findSafety('СТОП');
+
+    panel.innerHTML =
+      '<div class="today-meta">' +
+        '<div class="today-date-block">' +
+          '<div class="today-weekday">'+DAY_LABEL_FULL[DAY_KEYS[(new Date().getDay()+6)%7]]+'</div>' +
+          '<div class="today-date">'+formatDateLong(new Date())+' · повернення '+(ctx.index+1)+' з '+state.reentry.items.length+'</div>' +
+        '</div>' +
+        '<div class="phase-tag"><span class="phase-dot" style="background:var(--warn)"></span>Після хвороби</div>' +
+      '</div>' +
+      '<div class="today-card reentry-card'+(done?' is-done':'')+'" style="cursor:default;">' +
+        '<div class="today-card-type">'+(isRun ? 'ЛЕГКЕ ПОВЕРНЕННЯ' : 'ВІДНОВЛЕННЯ')+(done?' · ВИКОНАНО':'')+'</div>' +
+        '<div class="today-plan-text">'+escapeHtml(displayPlanText(item.text, state.maxHR))+'</div>' +
+        (zone ? '<div class="today-zone-pill">Зона '+zone.zone+' · '+zoneRangeForZoneStr(zone.zone, state.maxHR)+' уд/хв</div>' : '') +
+      '</div>' +
+      (isRun ? '<div class="today-actions"><button class="btn '+(done?'btn-done-state':'')+'" id="reentry-done-btn">'+(done ? '✓ Виконано' : 'Позначити виконаним')+'</button></div>' : '') +
+      '<button class="btn btn-warn btn-block" id="today-pause-btn">🤒 Знову погіршало — призупинити</button>' +
+      '<div class="today-note"><strong>Далі:</strong> після цих днів повертаємось до плану — тиждень '+state.reentry.resumeWeek+', '+DAY_LABEL_FULL[state.reentry.resumeDayKey].toLowerCase()+' («'+escapeHtml(resumeWk.phase)+'»). ' +
+        'Темп — розмовний; якщо важко дихати, перейдіть на ходьбу.' +
+        (stop ? '<br><br><strong>Зупиніться негайно, якщо:</strong> '+escapeHtml(stop.text) : '') + '</div>';
+
+    if (isRun) document.getElementById('reentry-done-btn').addEventListener('click', function(){ toggleReentryDone(ctx.index); });
+    document.getElementById('today-pause-btn').addEventListener('click', function(){ openPauseModal(); });
+  }
+
+  // Позначити день плану виконаним / зняти позначку
+  async function toggleDone(week, dayKey){
+    if (isBlankDay(week, dayKey)) return; // порожні дні не відстежуються
+    var key = itemKey(week, dayKey);
     state.doneMap[key] = !state.doneMap[key];
     await persistDone();
-    renderProgress();
-    renderToday();
-    renderPlanList();
+    renderAll();
     if (document.getElementById('overlay-detail').classList.contains('open')){
-      updateDetailDoneButton(week, dayKeyStr);
+      updateDetailDoneButton(week, dayKey);
     }
   }
 
-  // ---------- Plan list (all weeks) ----------
+  /* ---------- Вкладка «Весь план» ---------- */
   function renderPlanList(){
-    var done = 0;
-    Object.keys(state.doneMap).forEach(function(k){ if (state.doneMap[k]) done++; });
-    document.getElementById('plan-summary').innerHTML = 'Виконано <strong style="color:var(--text)">'+done+'</strong> з '+TOTAL_TRACKABLE+' тренувань';
+    var ctx = getTodayContext();
+    var done = countDone();
 
-    var pos = currentPosition();
-    if (state.openWeekInList === null){ state.openWeekInList = Math.min(24, Math.max(1, pos.week)); }
-    var list = document.getElementById('plan-list');
+    // Підсумок + (НОВЕ) позначка паузи/повернення
+    var summary = 'Виконано <strong style="color:var(--text)">'+done+'</strong> з '+TOTAL_TRACKABLE+' тренувань';
+    if (ctx.mode === 'paused') summary += '<span style="color:var(--warn)">⏸ пауза · дати орієнтовні, перерахуються після повернення</span>';
+    if (ctx.mode === 'reentry') summary += '<span style="color:var(--warn)">повернення після хвороби</span>';
+    document.getElementById('plan-summary').innerHTML = summary;
+
+    if (state.openWeekInList === null){ state.openWeekInList = Math.min(TOTAL_WEEKS, Math.max(1, ctx.week)); }
+
     var html = '';
     PLAN.weeks.forEach(function(wk){
       var w = wk.week;
-      var isCurrentWeek = (w === pos.week);
+      // Підсвічуємо «сьогодні» лише у звичайному режимі
+      var isCurrentWeek = (ctx.mode === 'plan' && w === ctx.week);
       var isOpen = (state.openWeekInList === w);
       var cvar = phaseColorVar(wk.phase);
 
@@ -1251,7 +1424,9 @@
         var text = wk.days[k] || '';
         var isBlank = text.trim() === '';
         var checked = !!state.doneMap[itemKey(w,k)];
-        var isToday = (w === pos.week && k === pos.dayKey);
+        var isToday = (ctx.mode === 'plan' && w === ctx.week && k === ctx.dayKey);
+        // [НОВЕ] Позиція, на якій заморожено паузу
+        var isPausedHere = (ctx.mode === 'paused' && w === ctx.week && k === ctx.dayKey);
         var d = dateForPosition(w, k);
         rows +=
           '<div class="day-row'+(isBlank?' is-blank':'')+(isToday?' is-today':'')+'" data-week="'+w+'" data-day="'+k+'">' +
@@ -1259,7 +1434,7 @@
               (checked ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
             '</div>' +
             '<div class="day-row-body">' +
-              '<div class="day-row-top"><span class="day-row-label">'+DAY_LABEL_FULL[k]+(isToday?' · сьогодні':'')+'</span><span class="day-row-date">'+formatDateLong(d)+'</span></div>' +
+              '<div class="day-row-top"><span class="day-row-label">'+DAY_LABEL_FULL[k]+(isToday?' · сьогодні':'')+(isPausedHere?' · ⏸ тут пауза':'')+'</span><span class="day-row-date">'+formatDateLong(d)+'</span></div>' +
               '<div class="day-row-text">'+(isBlank ? 'Вільний день' : escapeHtml(displayPlanText(text, state.maxHR)))+'</div>' +
             '</div>' +
           '</div>';
@@ -1281,8 +1456,10 @@
           '<div class="week-days">'+rows+'</div>' +
         '</div>';
     });
+    var list = document.getElementById('plan-list');
     list.innerHTML = html;
 
+    // Розгорнути / згорнути тиждень
     list.querySelectorAll('[data-role="week-head"]').forEach(function(el){
       el.addEventListener('click', function(){
         var w = parseInt(el.getAttribute('data-week'),10);
@@ -1290,65 +1467,57 @@
         renderPlanList();
       });
     });
+    // Кружечок «виконано»
     list.querySelectorAll('[data-role="check"]').forEach(function(el){
       el.addEventListener('click', function(e){
         e.stopPropagation();
         if (el.classList.contains('blank')) return;
-        var w = parseInt(el.getAttribute('data-week'),10);
-        var k = el.getAttribute('data-day');
-        toggleDone(w,k);
+        toggleDone(parseInt(el.getAttribute('data-week'),10), el.getAttribute('data-day'));
       });
     });
+    // Клік по рядку — деталі
     list.querySelectorAll('.day-row').forEach(function(el){
       el.addEventListener('click', function(){
-        var w = parseInt(el.getAttribute('data-week'),10);
-        var k = el.getAttribute('data-day');
         if (el.classList.contains('is-blank')) return;
-        openDetailModal(w,k);
+        openDetailModal(parseInt(el.getAttribute('data-week'),10), el.getAttribute('data-day'));
       });
     });
   }
 
-  // ================= DETAIL MODAL =================
-  var currentDetail = null;
+  /* =================================================================
+     10. МОДАЛКА ДЕТАЛЕЙ ДНЯ
+     ================================================================= */
+  var currentDetail = null; // {week, dayKey} поточного відкритого дня
 
-  function openDetailModal(week, dayKeyStr){
-    currentDetail = {week:week, dayKey:dayKeyStr};
+  function openDetailModal(week, dayKey){
+    currentDetail = {week: week, dayKey: dayKey};
     var wk = PLAN.weeks[week-1];
-    var text = wk.days[dayKeyStr] || '';
-    var d = dateForPosition(week, dayKeyStr);
-    var type = classifyDay(text);
+    var text = wk.days[dayKey] || '';
+    var d = dateForPosition(week, dayKey);
 
-    document.getElementById('detail-title').textContent = DAY_LABEL_FULL[dayKeyStr]+', '+formatDateLong(d);
+    document.getElementById('detail-title').textContent = DAY_LABEL_FULL[dayKey]+', '+formatDateLong(d);
     document.getElementById('detail-sub').textContent = 'Тиждень '+week+' · '+wk.phase;
-    document.getElementById('detail-body').innerHTML = buildDetailBody(wk, dayKeyStr, text, type);
-    updateDetailDoneButton(week, dayKeyStr);
+    document.getElementById('detail-body').innerHTML = buildDetailBody(wk, dayKey, text, classifyDay(text));
+    updateDetailDoneButton(week, dayKey);
     document.getElementById('overlay-detail').classList.add('open');
   }
   function closeDetailModal(){
     document.getElementById('overlay-detail').classList.remove('open');
     currentDetail = null;
   }
-  function updateDetailDoneButton(week, dayKeyStr){
-    var wk = PLAN.weeks[week-1];
-    var isBlank = (wk.days[dayKeyStr]||'').trim() === '';
+  function updateDetailDoneButton(week, dayKey){
     var btn = document.getElementById('detail-done-btn');
-    if (isBlank){
-      btn.style.display = 'none';
-      return;
-    }
+    if (isBlankDay(week, dayKey)){ btn.style.display = 'none'; return; }
     btn.style.display = 'flex';
-    var done = !!state.doneMap[itemKey(week,dayKeyStr)];
+    var done = !!state.doneMap[itemKey(week, dayKey)];
     btn.textContent = done ? '✓ Виконано — скасувати' : 'Позначити виконаним';
     btn.className = 'btn btn-primary'+(done?' btn-done-state':'');
   }
 
-  function buildDetailBody(wk, dayKeyStr, text, type){
+  function buildDetailBody(wk, dayKey, text, type){
     var zone = parseZone(text);
     var iv = parseIntervalStructure(text);
-    var html = '';
-
-    html += '<div class="detail-planline">'+(text ? escapeHtml(displayPlanText(text, state.maxHR)) : 'У плані для цього дня немає окремого запису.')+'</div>';
+    var html = '<div class="detail-planline">'+(text ? escapeHtml(displayPlanText(text, state.maxHR)) : 'У плані для цього дня немає окремого запису.')+'</div>';
     if (zone){
       html += '<div class="detail-zone-pill">Пульсова зона '+zone.zone+' · '+zoneRangeForZoneStr(zone.zone, state.maxHR)+' уд/хв</div>';
     }
@@ -1358,46 +1527,36 @@
     if (wk.note){
       html += '<p class="detail-note"><strong>Фокус тижня:</strong> '+escapeHtml(wk.note)+'</p>';
     }
-
-    if (type === 'run' || type === 'long'){
-      html += runBlock(type);
-    } else if (type === 'strength'){
-      html += strengthBlock(wk.week);
-    } else if (type === 'rest-full' || type === 'rest-light'){
-      html += restBlock(type);
-    } else if (type === 'race'){
-      html += raceBlock();
-    } else if (type === 'blank'){
-      html += '<div class="detail-block"><h4>Пояснення</h4><p class="detail-note">Для цього дня в оригінальному плані запису немає. Використайте його як додатковий вільний або легкий відновлювальний день — без нового навантаження, якого немає в плані.</p></div>';
-    }
+    if (type === 'run' || type === 'long') html += runBlock(type);
+    else if (type === 'strength') html += strengthBlock(wk.week);
+    else if (type === 'rest-full' || type === 'rest-light') html += restBlock();
+    else if (type === 'race') html += raceBlock();
+    else html += '<div class="detail-block"><h4>Пояснення</h4><p class="detail-note">Для цього дня в оригінальному плані запису немає. Використайте його як додатковий вільний або легкий відновлювальний день — без нового навантаження, якого немає в плані.</p></div>';
     return html;
   }
 
+  // Блок для бігових днів: розминка, (для довгих) вода, сигнали СТОП
   function runBlock(type){
-    var warmup = findSafety('Розминка');
-    var stop = findSafety('СТОП');
-    var hydration = findSafety('Харчування');
+    var warmup = findSafety('Розминка'), stop = findSafety('СТОП'), hydration = findSafety('Харчування');
     var html = '<div class="detail-block"><h4>Як виконати</h4>';
     html += '<p class="detail-note">'+escapeHtml(PLAN.zoneImportantNote)+'</p>';
     if (warmup) html += '<p class="detail-note">'+escapeHtml(warmup.text)+'</p>';
     if (type === 'long' && hydration) html += '<p class="detail-note">'+escapeHtml(hydration.text)+'</p>';
     html += '</div>';
-    if (stop){
-      html += '<div class="detail-block"><h4>Негайно зупиніться, якщо</h4><p class="detail-note">'+escapeHtml(stop.text)+'</p></div>';
-    }
+    if (stop) html += '<div class="detail-block"><h4>Негайно зупиніться, якщо</h4><p class="detail-note">'+escapeHtml(stop.text)+'</p></div>';
     return html;
   }
 
+  // Блок силових вправ: набір залежить від тижня (до 8-го — базовий, з 9-го — розширений)
   function strengthBlock(week){
-    var complex = week >= 9 ? PLAN.strengthComplex.extended : PLAN.strengthComplex.basic;
-    var order = PLAN.strengthComplex.order;
-    var intro = PLAN.strengthComplex.intro;
+    var sc = PLAN.strengthComplex;
+    var complex = week >= 9 ? sc.extended : sc.basic;
     var exList = complex.ids.map(function(id){
       return PLAN.exercises.find(function(e){ return e.id === id; });
     }).filter(Boolean);
 
     var html = '<div class="detail-block"><h4>Комплекс на цей тиждень (тижні '+complex.weeksLabel+', '+complex.duration+')</h4>';
-    html += '<p class="detail-note">'+escapeHtml(intro)+'</p>';
+    html += '<p class="detail-note">'+escapeHtml(sc.intro)+'</p>';
     exList.forEach(function(ex){
       html += '<div class="ex-item">' +
         '<div class="ex-item-top"><span class="ex-item-name">№'+ex.id+' '+escapeHtml(ex.name)+'</span><span class="ex-item-sets">'+escapeHtml(ex.sets)+'</span></div>' +
@@ -1407,94 +1566,40 @@
         '</details>' +
       '</div>';
     });
-    if (order){
-      html += '<p class="detail-note" style="margin-top:10px;"><strong>Порядок:</strong> '+escapeHtml(order)+'</p>';
-    }
+    // У даних order = null, тому показуємо блок лише якщо порядок задано
+    if (sc.order) html += '<p class="detail-note" style="margin-top:10px;"><strong>Порядок:</strong> '+escapeHtml(sc.order)+'</p>';
     html += '</div>';
     return html;
   }
 
-  function restBlock(type){
-    var cross = findSafety('відпочинку та кросс');
-    var sleep = findSafety('Сон');
+  function restBlock(){
+    var cross = findSafety('відпочинку та кросс'), sleep = findSafety('Сон');
     var html = '<div class="detail-block"><h4>Як провести день</h4>';
     if (cross) html += '<p class="detail-note">'+escapeHtml(cross.text)+'</p>';
     if (sleep) html += '<p class="detail-note">'+escapeHtml(sleep.text)+'</p>';
-    html += '</div>';
-    return html;
+    return html + '</div>';
   }
 
   function raceBlock(){
-    var warmup = findSafety('Розминка');
-    var hydration = findSafety('Харчування');
-    var weekend = findSafety('Вихідні дні');
+    var warmup = findSafety('Розминка'), hydration = findSafety('Харчування'), weekend = findSafety('Вихідні дні');
     var html = '<div class="detail-block"><h4>День гонки</h4>';
     if (weekend) html += '<p class="detail-note">'+escapeHtml(weekend.text)+'</p>';
     if (warmup) html += '<p class="detail-note">'+escapeHtml(warmup.text)+'</p>';
     if (hydration) html += '<p class="detail-note">'+escapeHtml(hydration.text)+'</p>';
     html += '<p class="detail-note">Це фініш 24-тижневого плану — довіртесь тренуванням, тримайте власний темп і отримайте задоволення від кожного кілометра.</p>';
-    html += '</div>';
-    return html;
+    return html + '</div>';
   }
 
-  // ================= WEIGHT TRACKING =================
-  function todayDateInputValue(){
-    var d = new Date();
-    return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
-  }
-  function formatDateShort(iso){
-    var parts = iso.split('-');
-    var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
-    return formatDateLong(d);
-  }
+  /* =================================================================
+     11. ВАГА / ТЕМА / ІНФО
+     ================================================================= */
+
+  /* ---------- Вага ---------- */
   function sortedWeightLog(){
     return state.weightLog.slice().sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
   }
-
-  function openWeightModal(){
-    renderWeightModal();
-    document.getElementById('overlay-weight').classList.add('open');
-  }
-  function closeWeightModal(){
-    document.getElementById('overlay-weight').classList.remove('open');
-  }
-
-  // ================= THEME MODAL =================
-  var THEMES = [
-    {id:'dark', label:'Темна'},
-    {id:'light', label:'Світла'},
-    {id:'gray', label:'Сіра'}
-  ];
-  var THEME_SWATCHES = {
-    dark:'linear-gradient(135deg,#1a2029,#11151a)',
-    light:'linear-gradient(135deg,#ffffff,#e9ebef)',
-    gray:'linear-gradient(135deg,#5a5b5f,#48494c)'
-  };
-  function openThemeModal(){
-    renderThemeModal();
-    document.getElementById('overlay-theme').classList.add('open');
-  }
-  function closeThemeModal(){
-    document.getElementById('overlay-theme').classList.remove('open');
-  }
-  function renderThemeModal(){
-    var grid = document.getElementById('theme-modal-grid');
-    grid.innerHTML = THEMES.map(function(t){
-      return '<div class="theme-chip'+(state.theme===t.id?' selected':'')+'" data-theme-choice="'+t.id+'">' +
-        '<div class="theme-swatch" style="background:'+THEME_SWATCHES[t.id]+'"></div>' +
-        '<div class="theme-chip-label">'+t.label+'</div>' +
-      '</div>';
-    }).join('');
-    grid.querySelectorAll('.theme-chip').forEach(function(el){
-      el.addEventListener('click', function(){
-        var id = el.getAttribute('data-theme-choice');
-        applyTheme(id);
-        persistTheme();
-        grid.querySelectorAll('.theme-chip').forEach(function(c){ c.classList.remove('selected'); });
-        el.classList.add('selected');
-      });
-    });
-  }
+  function openWeightModal(){ renderWeightModal(); document.getElementById('overlay-weight').classList.add('open'); }
+  function closeWeightModal(){ document.getElementById('overlay-weight').classList.remove('open'); }
 
   function renderWeightModal(){
     var startWeight = state.startWeight;
@@ -1504,13 +1609,9 @@
     var goal = state.goalWeight;
 
     function deltaClass(v){ return v > 0.05 ? 'up' : (v < -0.05 ? 'down' : ''); }
-    function fmtDelta(v){
-      if (Math.abs(v) < 0.05) return '0';
-      return (v > 0 ? '+' : '') + v.toFixed(1);
-    }
+    function fmtDelta(v){ return Math.abs(v) < 0.05 ? '0' : (v > 0 ? '+' : '') + v.toFixed(1); }
 
-    var html = '';
-    html += '<div class="weight-stats">' +
+    var html = '<div class="weight-stats">' +
       '<div class="weight-stat-cell"><div class="weight-stat-val">'+startWeight.toFixed(1)+'</div><div class="weight-stat-key">старт, кг</div></div>' +
       '<div class="weight-stat-cell"><div class="weight-stat-val '+deltaClass(deltaStart)+'">'+current.toFixed(1)+'</div><div class="weight-stat-key">поточна, кг</div></div>' +
       '<div class="weight-stat-cell"><div class="weight-stat-val">'+(goal!=null ? goal.toFixed(1) : '—')+'</div><div class="weight-stat-key">ціль, кг</div></div>' +
@@ -1535,10 +1636,9 @@
       html += '<div class="weight-empty">Записів ще немає. Додайте першу вагу, щоб почати відстежувати динаміку.</div>';
     } else {
       html += '<div class="weight-list">';
-      var chron = log.slice().reverse();
-      for (var i=0;i<chron.length;i++){
-        var entry = chron[i];
-        var prevEntry = chron[i+1];
+      var chron = log.slice().reverse(); // найновіші зверху
+      for (var i=0; i<chron.length; i++){
+        var entry = chron[i], prevEntry = chron[i+1];
         var d = prevEntry ? (entry.weight - prevEntry.weight) : 0;
         html += '<div class="weight-row">' +
           '<div class="weight-row-date">'+formatDateShort(entry.date)+'</div>' +
@@ -1555,9 +1655,7 @@
     document.getElementById('weight-body').innerHTML = html;
 
     document.getElementById('weight-add-btn').addEventListener('click', addWeightEntry);
-    document.getElementById('weight-value-input').addEventListener('keydown', function(e){
-      if (e.key === 'Enter') addWeightEntry();
-    });
+    document.getElementById('weight-value-input').addEventListener('keydown', function(e){ if (e.key === 'Enter') addWeightEntry(); });
     document.querySelectorAll('.weight-row-del').forEach(function(btn){
       btn.addEventListener('click', function(){ deleteWeightEntry(btn.getAttribute('data-id')); });
     });
@@ -1569,71 +1667,90 @@
     });
   }
 
+  // Простий SVG-графік ваги (старт — пунктир, ціль — синя лінія, записи — крапки)
   function buildWeightSparkline(log, startWeight, goalWeight){
     var w = 560, h = 140, padX = 14, padY = 22;
     var n = log.length;
     if (n === 0 && goalWeight == null){
       return '<div class="weight-chart-empty">Додайте перший запис ваги, щоб побачити графік динаміки.</div>';
     }
-
     var values = [startWeight].concat(log.map(function(e){ return e.weight; }));
     if (goalWeight != null) values.push(goalWeight);
     var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
     if (min === max){ min -= 1; max += 1; }
     var span = max - min;
-    min -= span*0.08; max += span*0.08; span = max - min;
+    min -= span*0.08; max += span*0.08; span = max - min; // трохи повітря зверху/знизу
 
     function x(i){ return n > 1 ? (padX + (i/(n-1)) * (w - padX*2)) : w/2; }
     function y(v){ return h - padY - ((v-min)/span) * (h - padY*2); }
 
-    var startY = y(startWeight);
     var parts = [];
+    var startY = y(startWeight);
     parts.push('<line x1="'+padX+'" y1="'+startY+'" x2="'+(w-padX)+'" y2="'+startY+'" stroke="var(--text-faint)" stroke-width="1" stroke-dasharray="3 4"/>');
     parts.push('<text x="'+(w-padX)+'" y="'+(startY-5)+'" text-anchor="end" font-size="11" fill="var(--text-faint)">старт '+startWeight.toFixed(1)+'</text>');
-
     if (goalWeight != null){
       var goalY = y(goalWeight);
       parts.push('<line x1="'+padX+'" y1="'+goalY+'" x2="'+(w-padX)+'" y2="'+goalY+'" stroke="var(--phase-1)" stroke-width="1.4" stroke-dasharray="6 3"/>');
       parts.push('<text x="'+padX+'" y="'+(goalY-5)+'" text-anchor="start" font-size="11" fill="var(--phase-1)">ціль '+goalWeight.toFixed(1)+'</text>');
     }
-
-    if (n >= 1){
-      if (n >= 2){
-        var points = log.map(function(e,i){ return x(i)+','+y(e.weight); }).join(' ');
-        parts.push('<polyline points="'+points+'" fill="none" stroke="var(--accent-1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>');
-      }
-      var dots = log.map(function(e,i){ return '<circle cx="'+x(i)+'" cy="'+y(e.weight)+'" r="3.2" fill="var(--accent-2)"/>'; }).join('');
-      parts.push(dots);
+    if (n >= 2){
+      var points = log.map(function(e,i){ return x(i)+','+y(e.weight); }).join(' ');
+      parts.push('<polyline points="'+points+'" fill="none" stroke="var(--accent-1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>');
     }
-
+    if (n >= 1){
+      parts.push(log.map(function(e,i){ return '<circle cx="'+x(i)+'" cy="'+y(e.weight)+'" r="3.2" fill="var(--accent-2)"/>'; }).join(''));
+    }
     return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">' + parts.join('') + '</svg>';
   }
 
   async function addWeightEntry(){
-    var dateInput = document.getElementById('weight-date-input');
+    var date = document.getElementById('weight-date-input').value;
     var valueInput = document.getElementById('weight-value-input');
-    var date = dateInput.value;
     var weight = parseFloat(valueInput.value);
     if (!date || isNaN(weight) || weight < 30 || weight > 300) return;
+    // Один запис на дату: старий замінюється новим
     state.weightLog = state.weightLog.filter(function(e){ return e.date !== date; });
     state.weightLog.push({ id: String(Date.now())+'-'+Math.floor(Math.random()*1000), date: date, weight: weight });
     await persistWeight();
-    valueInput.value = '';
     renderWeightModal();
   }
-
   async function deleteWeightEntry(id){
     state.weightLog = state.weightLog.filter(function(e){ return e.id !== id; });
     await persistWeight();
     renderWeightModal();
   }
 
-  // ================= INFO MODAL =================
+  /* ---------- Тема оформлення ---------- */
+  var THEMES = [{id:'dark', label:'Темна'}, {id:'light', label:'Світла'}, {id:'gray', label:'Графіт'}];
+  var THEME_SWATCHES = {
+    dark:'linear-gradient(135deg,#1a2029,#11151a)',
+    light:'linear-gradient(135deg,#ffffff,#e9ebef)',
+    gray:'linear-gradient(135deg,#363c46,#262a31)'
+  };
+  function openThemeModal(){ renderThemeModal(); document.getElementById('overlay-theme').classList.add('open'); }
+  function closeThemeModal(){ document.getElementById('overlay-theme').classList.remove('open'); }
+  function renderThemeModal(){
+    var grid = document.getElementById('theme-modal-grid');
+    grid.innerHTML = THEMES.map(function(t){
+      return '<div class="theme-chip'+(state.theme===t.id?' selected':'')+'" data-theme-choice="'+t.id+'">' +
+        '<div class="theme-swatch" style="background:'+THEME_SWATCHES[t.id]+'"></div>' +
+        '<div class="theme-chip-label">'+t.label+'</div></div>';
+    }).join('');
+    grid.querySelectorAll('.theme-chip').forEach(function(el){
+      el.addEventListener('click', function(){
+        applyTheme(el.getAttribute('data-theme-choice'));
+        persistTheme();
+        grid.querySelectorAll('.theme-chip').forEach(function(c){ c.classList.remove('selected'); });
+        el.classList.add('selected');
+      });
+    });
+  }
+
+  /* ---------- Інфо: дані, зони, рекомендації ---------- */
   function openInfoModal(){
     var a = PLAN.athlete;
     var bmi = bmiFor(state.startWeight, a.height);
-    var html = '';
-    html += '<div class="info-section"><h4>Ваші дані</h4>' +
+    var html = '<div class="info-section"><h4>Ваші дані</h4>' +
       '<div class="zone-row"><div class="zone-row-name">Вік</div><div class="zone-row-range">'+a.age+' років</div></div>' +
       '<div class="zone-row"><div class="zone-row-name">Зріст / Вага</div><div class="zone-row-range">'+a.height+' см / '+state.startWeight.toFixed(1)+' кг</div></div>' +
       '<div class="zone-row"><div class="zone-row-name">ІМТ</div><div class="zone-row-range">'+bmi.toFixed(1)+' · '+escapeHtml(bmiLabelFor(bmi))+'</div></div>' +
@@ -1656,16 +1773,106 @@
     document.getElementById('info-body').innerHTML = html;
     document.getElementById('overlay-info').classList.add('open');
   }
-  function closeInfoModal(){
-    document.getElementById('overlay-info').classList.remove('open');
+  function closeInfoModal(){ document.getElementById('overlay-info').classList.remove('open'); }
+
+  /* =================================================================
+     12. [НОВЕ] МОДАЛКА ПАУЗИ ТА ПОВЕРНЕННЯ
+     Одна модалка (#overlay-pause), два режими: «призупинити» і «повернутися».
+     ================================================================= */
+  function openPauseOverlay(){ document.getElementById('overlay-pause').classList.add('open'); }
+  function closePauseModal(){ document.getElementById('overlay-pause').classList.remove('open'); }
+
+  // --- Режим 1: призупинити план ---
+  function openPauseModal(){
+    var inReentry = getTodayContext().mode === 'reentry';
+    document.getElementById('pause-title').textContent = 'Призупинити план';
+    document.getElementById('pause-sub').textContent = 'Хвороба, травма, відрядження — будь-яка вимушена перерва';
+
+    var html = '<p class="detail-note">План «заморозиться» на поточному тренуванні: дні не спливатимуть, виконаний прогрес збережеться. Коли одужаєте, застосунок запропонує безпечне повернення — з легкими тренуваннями та (якщо перерва довга) відкатом на кілька тижнів.</p>';
+    if (!inReentry){
+      html += '<label class="field-label" for="pause-date-input">Хворію з (дата)</label>' +
+        '<input class="field-input" type="date" id="pause-date-input" value="'+todayDateInputValue()+'" max="'+todayDateInputValue()+'">';
+    }
+    html += '<button class="btn btn-primary btn-block" id="pause-confirm-btn">Призупинити план</button>';
+    document.getElementById('pause-body').innerHTML = html;
+
+    document.getElementById('pause-confirm-btn').addEventListener('click', async function(){
+      var input = document.getElementById('pause-date-input');
+      await startPause(input ? input.value : null);
+      closePauseModal();
+      renderAll();
+    });
+    openPauseOverlay();
   }
 
-  // ================= GLOBAL BINDINGS =================
+  // --- Режим 2: повернутися до плану ---
+  function openResumeModal(){
+    renderResumeModal(null);
+    openPauseOverlay();
+  }
+
+  // rollbackOverride: null = рекомендований відкат, число = вибір користувача
+  function renderResumeModal(rollbackOverride){
+    var pp = state.pause;
+    var r = computeResumePreview(rollbackOverride);
+    var recommended = computeResumePreview(null).rollback;
+
+    document.getElementById('pause-title').textContent = 'Повернення до плану';
+    document.getElementById('pause-sub').textContent = 'Хвороба тривала '+r.sickDays+' '+pluralDays(r.sickDays);
+
+    // Варіанти відкату: від 0 до min(MAX_MANUAL_ROLLBACK, пройдені тижні)
+    var maxRb = Math.min(MAX_MANUAL_ROLLBACK, pp.week - 1);
+    var options = '';
+    for (var i=0; i<=maxRb; i++){
+      options += '<option value="'+i+'"'+(i===r.rollback?' selected':'')+'>'+
+        (i===0 ? 'Без відкату — продовжити з того ж місця' : 'Відкат на '+i+' '+(i===1?'тиждень':(i<5?'тижні':'тижнів')))+
+        (i===recommended ? ' · рекомендовано' : '')+'</option>';
+    }
+
+    var html = '';
+    // Медичне попередження — показуємо, коли хвороба не була дрібною
+    if (r.sickDays > 2){
+      html += '<div class="resume-warning">Якщо була температура вище 38 °C, біль у грудях, задишка або хвороба затяглась понад тиждень — перед бігом порадьтесь із лікарем. Перші тренування мають бути легкими: можете розмовляти без задишки.</div>';
+    }
+
+    html += '<label class="field-label" for="resume-rollback-select">Звідки продовжити</label>' +
+      '<select class="field-input" id="resume-rollback-select">'+options+'</select>';
+
+    html += '<div class="resume-summary">' +
+      '<div class="resume-row"><span>Легких тренувань на вхід</span><span>'+(r.rule.rampSessions ? r.rule.rampSessions+' (через день)' : 'не потрібно')+'</span></div>' +
+      '<div class="resume-row"><span>Повернення в план</span><span>тиждень '+r.resumeWeek+', '+DAY_LABEL_FULL[r.resumeDayKey].toLowerCase()+'</span></div>' +
+      '<div class="resume-row"><span>Дата гонки (тиж. 24)</span><span>'+formatDateWithYear(r.raceAfter)+'</span></div>' +
+      '<div class="resume-row"><span>Зсув гонки</span><span>'+(r.raceShiftDays > 0 ? '+'+r.raceShiftDays+' '+pluralDays(r.raceShiftDays) : 'без зсуву')+'</span></div>' +
+    '</div>';
+
+    if (r.undoKeys.length){
+      html += '<p class="detail-note">Буде знято позначку «виконано» з <strong>'+r.undoKeys.length+'</strong> тренувань — ви повторите ці тижні, щоб тіло плавно повернулось у навантаження.</p>';
+    }
+    html += '<p class="detail-note">Якщо ваша гонка має фіксовану дату, а зсув її перевищує — оберіть менший відкат або скоригуйте старт у налаштуваннях (⚙).</p>';
+    html += '<button class="btn btn-primary btn-block" id="resume-confirm-btn">Повернутися до плану</button>';
+
+    document.getElementById('pause-body').innerHTML = html;
+
+    // Зміна відкату перераховує прев'ю
+    document.getElementById('resume-rollback-select').addEventListener('change', function(e){
+      renderResumeModal(parseInt(e.target.value, 10));
+    });
+    document.getElementById('resume-confirm-btn').addEventListener('click', async function(){
+      await confirmResume(r.rollback);
+      closePauseModal();
+      renderAll();
+    });
+  }
+
+  /* =================================================================
+     13. ГЛОБАЛЬНІ ОБРОБНИКИ ПОДІЙ (навішуються один раз)
+     ================================================================= */
   var eventsBound = false;
   function bindAppEventsOnce(){
     if (eventsBound) return;
     eventsBound = true;
 
+    // Вкладки
     document.getElementById('tab-today-btn').addEventListener('click', function(){
       document.getElementById('tab-today-btn').classList.add('active');
       document.getElementById('tab-plan-btn').classList.remove('active');
@@ -1679,36 +1886,32 @@
       document.getElementById('panel-today').classList.remove('active');
     });
 
+    // Кнопки шапки
     document.getElementById('btn-info').addEventListener('click', openInfoModal);
     document.getElementById('btn-weight').addEventListener('click', openWeightModal);
     document.getElementById('btn-theme').addEventListener('click', openThemeModal);
     document.getElementById('btn-settings').addEventListener('click', function(){ showSetup(true); });
 
-    document.getElementById('detail-close').addEventListener('click', closeDetailModal);
-    document.getElementById('overlay-detail').addEventListener('click', function(e){
-      if (e.target.id === 'overlay-detail') closeDetailModal();
-    });
+    // Модалки: закриття по хресту та по кліку на фон
+    function bindOverlay(overlayId, closeBtnId, closeFn){
+      document.getElementById(closeBtnId).addEventListener('click', closeFn);
+      document.getElementById(overlayId).addEventListener('click', function(e){
+        if (e.target.id === overlayId) closeFn();
+      });
+    }
+    bindOverlay('overlay-detail', 'detail-close', closeDetailModal);
+    bindOverlay('overlay-info', 'info-close', closeInfoModal);
+    bindOverlay('overlay-weight', 'weight-close', closeWeightModal);
+    bindOverlay('overlay-theme', 'theme-close', closeThemeModal);
+    bindOverlay('overlay-pause', 'pause-close', closePauseModal);   // [НОВЕ]
+
     document.getElementById('detail-done-btn').addEventListener('click', function(){
       if (currentDetail) toggleDone(currentDetail.week, currentDetail.dayKey);
     });
 
-    document.getElementById('info-close').addEventListener('click', closeInfoModal);
-    document.getElementById('overlay-info').addEventListener('click', function(e){
-      if (e.target.id === 'overlay-info') closeInfoModal();
-    });
-
-    document.getElementById('weight-close').addEventListener('click', closeWeightModal);
-    document.getElementById('overlay-weight').addEventListener('click', function(e){
-      if (e.target.id === 'overlay-weight') closeWeightModal();
-    });
-
-    document.getElementById('theme-close').addEventListener('click', closeThemeModal);
-    document.getElementById('overlay-theme').addEventListener('click', function(e){
-      if (e.target.id === 'overlay-theme') closeThemeModal();
-    });
-
+    // Esc закриває всі модалки
     document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape'){ closeDetailModal(); closeInfoModal(); closeWeightModal(); closeThemeModal(); }
+      if (e.key === 'Escape'){ closeDetailModal(); closeInfoModal(); closeWeightModal(); closeThemeModal(); closePauseModal(); }
     });
   }
 
