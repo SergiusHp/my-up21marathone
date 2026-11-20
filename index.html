@@ -355,6 +355,19 @@ input, select, textarea{ font-size:16px; }
 .resume-row:first-child{ border-top:none; }
 .resume-row span:first-child{ color:var(--text-dim); }
 .resume-row span:last-child{ font-weight:600; text-align:right; }
+/* Повтор тижня / розвантажувальний тиждень */
+.deload-card{ border-color:rgba(95,211,154,0.45); }
+.repeat-pending{ margin-top:12px; border:1px dashed var(--border); border-radius:var(--radius-md); padding:14px 16px; background:var(--surface); }
+.repeat-pending-title{ font-weight:600; font-size:14px; }
+.repeat-pending-text{ font-size:13px; color:var(--text-dim); margin-top:4px; line-height:1.5; }
+.choice-list{ display:flex; flex-direction:column; gap:10px; margin:12px 0; }
+.choice-card{ text-align:left; width:100%; background:var(--surface-2); border:1.5px solid var(--border); border-radius:var(--radius-md); padding:13px 14px; color:var(--text); font-family:var(--font-body); cursor:pointer; }
+.choice-card:focus-visible{ outline:2px solid var(--accent-1); outline-offset:2px; }
+.choice-card.selected{ border-color:var(--accent-1); background:var(--surface-3); }
+.choice-title{ font-weight:600; font-size:14.5px; }
+.choice-badge{ display:inline-block; margin-left:6px; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--success); border:1px solid currentColor; border-radius:var(--radius-pill); padding:1px 7px; vertical-align:2px; }
+.choice-text{ font-size:12.5px; color:var(--text-dim); margin-top:5px; line-height:1.5; }
+.choice-days{ font-size:12px; color:var(--text-faint); margin-top:6px; line-height:1.5; }
 .resume-warning{ font-size:12.5px; line-height:1.5; color:var(--warn); background:var(--warn-dim); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:10px; }
 
 /* ---------- 12. Адаптив ---------- */
@@ -517,6 +530,21 @@ input, select, textarea{ font-size:16px; }
   </div>
 </div>
 
+<!-- Модалка: повторити тиждень / розвантажувальний тиждень.
+     Вміст (#repeat-body) генерується в JS — див. секцію 12б. -->
+<div class="overlay" id="overlay-repeat">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-head-title" id="repeat-title">Повторити тиждень</div>
+        <div class="modal-head-sub" id="repeat-sub">—</div>
+      </div>
+      <button class="modal-close" id="repeat-close" aria-label="Закрити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg></button>
+    </div>
+    <div id="repeat-body"></div>
+  </div>
+</div>
+
 <!-- =====================================================================
      ДАНІ ПЛАНУ (JSON). Це єдине місце, де лежить сам тренувальний план,
      вправи, зони та рекомендації. Логіку застосунку тут міняти не треба.
@@ -537,12 +565,14 @@ input, select, textarea{ font-size:16px; }
     4. Позиція в плані (дата <-> тиждень/день)
     5. Контекст «сьогодні» (план / пауза / повернення)  [НОВЕ]
     6. Логіка паузи та повернення                        [НОВЕ]
+    6б. Повтор тижня / розвантажувальний тиждень
     7. Ініціалізація
     8. Екран налаштування старту
     9. Головний екран: прогрес, «Сьогодні», список плану
    10. Модалка деталей дня
    11. Вага / Тема / Інфо
    12. Модалка паузи та повернення                       [НОВЕ]
+   12б. Модалка «Повторити тиждень»
    13. Глобальні обробники подій
    ===================================================================== */
 (function(){
@@ -685,6 +715,7 @@ input, select, textarea{ font-size:16px; }
   var K_THEME = 'hm_theme_v1';
   var K_PAUSE = 'hm_pause_v1';               // [НОВЕ] активна пауза або null
   var K_REENTRY = 'hm_reentry_v1';           // [НОВЕ] активне повернення після хвороби або null
+  var K_REPEAT = 'hm_repeat_v1';             // запланований повтор / розвантажувальний тиждень або null
 
   var state = {
     anchor: null,             // Date: календарний день, що відповідає тижню 1 / 'mon'
@@ -708,8 +739,19 @@ input, select, textarea{ font-size:16px; }
     //   items:[{text, kind}],        // kind: 'run' | 'rest' — по одному на календарний день
     //   done:{ "0": true },          // які пункти виконано
     //   resumeWeek, resumeDayKey     // куди потрапимо в плані після повернення
+    //   kind: 'sick' | 'deload'      // хвороба (за замовчуванням) або вставлений розвантажувальний тиждень
+    //   sourceWeek                   // для 'deload': з якого тижня плану взято тренування
     // }
-    reentry: null
+    reentry: null,
+
+    // Запланований повтор тижня: {
+    //   start:'YYYY-MM-DD',          // з якого дня діє (понеділок плану)
+    //   mode:'repeat' | 'deload',    // повторити тиждень base / вставити легкий тиждень deload
+    //   base: N,                     // останній тиждень перед повтором
+    //   deload: N | null             // тиждень плану, чиї тренування беремо для розвантаження
+    // }
+    // До дати start план іде як звичайно; у цей день зсувається якір (див. секцію 6б).
+    repeat: null
   };
 
   async function persistAll(){
@@ -727,6 +769,7 @@ input, select, textarea{ font-size:16px; }
   async function persistPauseState(){
     await Storage.set(K_PAUSE, state.pause ? JSON.stringify(state.pause) : '');
     await Storage.set(K_REENTRY, state.reentry ? JSON.stringify(state.reentry) : '');
+    await Storage.set(K_REPEAT, state.repeat ? JSON.stringify(state.repeat) : '');
   }
 
   /* =================================================================
@@ -980,6 +1023,7 @@ input, select, textarea{ font-size:16px; }
     }
 
     state.pause = {start: startKey, week: pos.week, dayKey: pos.dayKey};
+    state.repeat = null; // запланований повтор тижня втрачає сенс — після хвороби діють правила повернення
     state.openWeekInList = pos.week;
     await persistPauseState();
   }
@@ -1012,6 +1056,121 @@ input, select, textarea{ font-size:16px; }
     await persistPauseState();
   }
 
+  /* =================================================================
+     6б. ПОВТОР ТИЖНЯ ТА РОЗВАНТАЖУВАЛЬНИЙ ТИЖДЕНЬ
+
+     Два режими, обидва починаються з понеділка плану (сьогодні, якщо
+     сьогодні понеділок і він ще не виконаний, інакше наступного):
+       'repeat' — ще раз пройти останній тиждень (base), далі base+1.
+       'deload' — вставити легкий тиждень (тренування з розвантажувального
+                  тижня плану, напр. 12-го), далі base+1.
+     В обох випадках якір зсувається на 7 днів уперед, тож решта плану
+     і дата гонки автоматично посуваються на тиждень.
+     Розвантаження показується через механізм «вхідних» днів (state.reentry,
+     kind:'deload'), тому окремої логіки для екрана «Сьогодні» не треба.
+     До дня старту зміна лише запланована (state.repeat) і її можна скасувати.
+     ================================================================= */
+
+  // Розвантажувальні тижні визначаємо за текстом плану, а не номером
+  function isDeloadWeek(w){
+    var wk = PLAN.weeks[w-1];
+    return !!wk && /розвантаж/i.test((wk.days.mon||'') + ' ' + (wk.note||''));
+  }
+  function lastDeloadWeekUpTo(w){
+    for (var i = Math.min(w, TOTAL_WEEKS); i >= 1; i--){ if (isDeloadWeek(i)) return i; }
+    return null;
+  }
+
+  // Найближчий понеділок плану, з якого можна почати повтор
+  function repeatStartDate(){
+    var today = startOfDay(new Date());
+    var pos = planPositionForDate(today);
+    if (pos.dayKey === 'mon' && !state.doneMap[itemKey(pos.week, 'mon')]) return today;
+    return addDays(today, 7 - DAY_KEYS.indexOf(pos.dayKey));
+  }
+
+  // Прев'ю повтору. Нічого не змінює в state.
+  // fixed — збережений state.repeat (коли застосовуємо вже запланований повтор)
+  function computeRepeatPreview(mode, fixed){
+    var start = fixed ? dateFromKey(fixed.start) : repeatStartDate();
+    var base = fixed ? fixed.base : (planPositionForDate(start).week - 1);
+    var deload = fixed ? fixed.deload : lastDeloadWeekUpTo(base);
+    var valid = base >= 1 && base < TOTAL_WEEKS && (mode === 'repeat' || deload != null);
+    var newAnchor = addDays(start, -planIndex(base, 'mon'));
+    var undoKeys = [];
+    if (mode === 'repeat' && valid){
+      DAY_KEYS.forEach(function(k){ var key = itemKey(base, k); if (state.doneMap[key]) undoKeys.push(key); });
+    }
+    var raceBefore = dateForPosition(TOTAL_WEEKS, 'sun', state.anchor);
+    var raceAfter = dateForPosition(TOTAL_WEEKS, 'sun', newAnchor);
+    return {
+      mode: mode, valid: valid, start: start, base: base, deload: deload,
+      nextWeek: base + 1, nextWeekDate: addDays(start, 7),
+      newAnchor: newAnchor, undoKeys: undoKeys,
+      raceBefore: raceBefore, raceAfter: raceAfter,
+      raceShiftDays: daysBetween(raceBefore, raceAfter)
+    };
+  }
+
+  // Тренування розвантажувального тижня як «вхідні» дні (по одному на календарний день)
+  function buildDeloadItems(deloadWeek){
+    var wk = PLAN.weeks[deloadWeek-1];
+    return DAY_KEYS.map(function(k){
+      var text = wk.days[k] || '';
+      var type = classifyDay(text);
+      var isRest = (type === 'rest-full' || type === 'rest-light' || type === 'blank');
+      return {text: text || 'Вільний день', kind: isRest ? 'rest' : 'run'};
+    });
+  }
+
+  // Запланувати повтор. Якщо старт сьогодні — застосовуємо одразу.
+  async function scheduleRepeat(mode){
+    var r = computeRepeatPreview(mode);
+    if (!r.valid) return;
+    state.repeat = {start: dateKey(r.start), mode: mode, base: r.base, deload: mode === 'deload' ? r.deload : null};
+    await persistPauseState();
+    await applyPendingRepeat();
+  }
+
+  async function cancelRepeat(){
+    state.repeat = null;
+    await persistPauseState();
+  }
+
+  // Застосувати запланований повтор, якщо вже настав день старту. Повертає true, якщо щось змінилось.
+  async function applyPendingRepeat(){
+    var rep = state.repeat;
+    if (!rep) return false;
+    if (daysBetween(dateFromKey(rep.start), new Date()) < 0) return false; // ще не час
+
+    // Захист: пауза або інше повернення важливіші — повтор скасовуємо
+    if (state.pause || state.reentry){ state.repeat = null; await persistPauseState(); return true; }
+
+    var r = computeRepeatPreview(rep.mode, rep);
+    if (r.valid){
+      r.undoKeys.forEach(function(key){ delete state.doneMap[key]; });
+      state.anchor = r.newAnchor;
+      if (rep.mode === 'deload'){
+        state.reentry = {
+          kind: 'deload', sourceWeek: rep.deload,
+          start: rep.start, items: buildDeloadItems(rep.deload), done: {},
+          resumeWeek: r.nextWeek, resumeDayKey: 'mon'
+        };
+      }
+      state.openWeekInList = rep.mode === 'repeat' ? r.base : r.nextWeek;
+    }
+    state.repeat = null;
+
+    // Якщо застосовуємо із запізненням і вставлений тиждень уже минув — прибираємо його
+    if (state.reentry && daysBetween(dateFromKey(state.reentry.start), new Date()) >= state.reentry.items.length){
+      state.reentry = null;
+    }
+    await persistAnchor();
+    await persistDone();
+    await persistPauseState();
+    return true;
+  }
+
   // Позначка «виконано» для вхідного тренування
   async function toggleReentryDone(index){
     if (!state.reentry) return;
@@ -1034,6 +1193,7 @@ input, select, textarea{ font-size:16px; }
     var themeStr = await Storage.get(K_THEME);
     var pauseStr = await Storage.get(K_PAUSE);
     var reentryStr = await Storage.get(K_REENTRY);
+    var repeatStr = await Storage.get(K_REPEAT);
 
     if (doneStr){ try{ state.doneMap = JSON.parse(doneStr); }catch(e){ state.doneMap = {}; } }
     if (weightStr){ try{ state.weightLog = JSON.parse(weightStr); }catch(e){ state.weightLog = []; } }
@@ -1043,6 +1203,7 @@ input, select, textarea{ font-size:16px; }
     if (themeStr){ state.theme = themeStr; }
     if (pauseStr){ try{ state.pause = JSON.parse(pauseStr) || null; }catch(e){ state.pause = null; } }
     if (reentryStr){ try{ state.reentry = JSON.parse(reentryStr) || null; }catch(e){ state.reentry = null; } }
+    if (repeatStr){ try{ state.repeat = JSON.parse(repeatStr) || null; }catch(e){ state.repeat = null; } }
 
     // Прибирання: якщо вікно «вхідних» тренувань уже минуло — забуваємо про нього
     if (state.reentry){
@@ -1055,6 +1216,7 @@ input, select, textarea{ font-size:16px; }
 
     if (anchorStr){
       state.anchor = startOfDay(new Date(anchorStr));
+      await applyPendingRepeat(); // настав понеділок запланованого повтору — зсуваємо план
       showApp();
     } else {
       showSetup(false);
@@ -1068,10 +1230,18 @@ input, select, textarea{ font-size:16px; }
 
   // Годинник у шапці
   function startClock(){ updateClock(); setInterval(updateClock, 1000); }
+  var clockDayKey = dateKey(new Date());
   function updateClock(){
     var el = document.getElementById('topbar-clock');
     if (!el) return;
     var now = new Date();
+    // Застосунок відкритий через північ: оновлюємо «Сьогодні» і застосовуємо запланований повтор
+    if (dateKey(now) !== clockDayKey){
+      clockDayKey = dateKey(now);
+      if (state.anchor && document.getElementById('screen-app').style.display !== 'none'){
+        applyPendingRepeat().then(renderAll);
+      }
+    }
     var dayName = DAY_LABEL_FULL[DAY_KEYS[(now.getDay()+6)%7]]; // getDay: нд=0 -> перетворюємо на пн=0
     el.innerHTML = '<span class="clock-dot"></span>'+dayName+', '+formatDateLong(now)+' · '+pad2(now.getHours())+':'+pad2(now.getMinutes());
   }
@@ -1195,6 +1365,7 @@ input, select, textarea{ font-size:16px; }
       // [НОВЕ] Новий старт скасовує активну паузу/повернення — інакше позиції були б суперечливі
       state.pause = null;
       state.reentry = null;
+      state.repeat = null;
       autoFillPastAsDone();
       await persistAnchor();
       await persistDone();
@@ -1318,6 +1489,7 @@ input, select, textarea{ font-size:16px; }
         '<button class="btn btn-ghost" id="today-detail-btn">Детальніше</button>' +
         '<button class="btn '+(done?'btn-done-state':'')+'" id="today-done-btn">'+(done ? '✓ Виконано' : 'Позначити виконаним')+'</button>' +
       '</div>' +
+      repeatBlockHtml() +
       // [НОВЕ] Кнопка паузи
       '<button class="btn btn-warn btn-block" id="today-pause-btn">🤒 Захворів — призупинити план</button>' +
       (wk.note ? '<div class="today-note"><strong>Фокус тижня:</strong> '+escapeHtml(wk.note)+'</div>' : '');
@@ -1326,6 +1498,32 @@ input, select, textarea{ font-size:16px; }
     document.getElementById('today-detail-btn').addEventListener('click', function(e){ e.stopPropagation(); openDetailModal(ctx.week, ctx.dayKey); });
     document.getElementById('today-done-btn').addEventListener('click', function(e){ e.stopPropagation(); toggleDone(ctx.week, ctx.dayKey); });
     document.getElementById('today-pause-btn').addEventListener('click', function(){ openPauseModal(); });
+    bindRepeatBlock();
+  }
+
+  // Кнопка «Повторити тиждень» або картка вже запланованого повтору
+  function repeatBlockHtml(){
+    if (state.repeat){
+      var rp = state.repeat;
+      var what = rp.mode === 'deload'
+        ? 'розвантажувальний тиждень (як тиждень '+rp.deload+'), далі тиждень '+(rp.base+1)
+        : 'повтор тижня '+rp.base+', далі тиждень '+(rp.base+1);
+      var race = computeRepeatPreview(rp.mode, rp).raceAfter;
+      return '<div class="repeat-pending">' +
+          '<div class="repeat-pending-title">🔁 Заплановано з '+formatDateLong(dateFromKey(rp.start))+'</div>' +
+          '<div class="repeat-pending-text">'+what+'. Гонка: '+formatDateWithYear(race)+'.</div>' +
+          '<button class="btn btn-ghost btn-block" id="repeat-cancel-btn">Скасувати</button>' +
+        '</div>';
+    }
+    var r = computeRepeatPreview('repeat');
+    if (!r.valid) return '';
+    return '<button class="btn btn-ghost btn-block" id="today-repeat-btn">🔁 Повторити тиждень або взяти розвантаження</button>';
+  }
+  function bindRepeatBlock(){
+    var b = document.getElementById('today-repeat-btn');
+    if (b) b.addEventListener('click', function(){ openRepeatModal(null); });
+    var c = document.getElementById('repeat-cancel-btn');
+    if (c) c.addEventListener('click', async function(){ await cancelRepeat(); renderAll(); });
   }
 
   // [НОВЕ] Картка «План на паузі»
@@ -1350,29 +1548,38 @@ input, select, textarea{ font-size:16px; }
   function renderTodayReentry(panel, ctx){
     var item = ctx.item;
     var isRun = item.kind === 'run';
+    var isDeload = state.reentry.kind === 'deload';   // вставлений розвантажувальний тиждень
     var zone = parseZone(item.text);
     var done = !!state.reentry.done[String(ctx.index)];
     var resumeWk = PLAN.weeks[state.reentry.resumeWeek-1];
     var stop = findSafety('СТОП');
+    var cardType = isDeload
+      ? typeLabel(classifyDay(item.text)).toUpperCase()
+      : (isRun ? 'ЛЕГКЕ ПОВЕРНЕННЯ' : 'ВІДНОВЛЕННЯ');
 
     panel.innerHTML =
       '<div class="today-meta">' +
         '<div class="today-date-block">' +
           '<div class="today-weekday">'+DAY_LABEL_FULL[DAY_KEYS[(new Date().getDay()+6)%7]]+'</div>' +
-          '<div class="today-date">'+formatDateLong(new Date())+' · повернення '+(ctx.index+1)+' з '+state.reentry.items.length+'</div>' +
+          '<div class="today-date">'+formatDateLong(new Date())+' · '+(isDeload ? 'розвантаження, день ' : 'повернення ')+(ctx.index+1)+' з '+state.reentry.items.length+'</div>' +
         '</div>' +
-        '<div class="phase-tag"><span class="phase-dot" style="background:var(--warn)"></span>Після хвороби</div>' +
+        (isDeload
+          ? '<div class="phase-tag"><span class="phase-dot" style="background:var(--success)"></span>Розвантажувальний тиждень</div>'
+          : '<div class="phase-tag"><span class="phase-dot" style="background:var(--warn)"></span>Після хвороби</div>') +
       '</div>' +
-      '<div class="today-card reentry-card'+(done?' is-done':'')+'" style="cursor:default;">' +
-        '<div class="today-card-type">'+(isRun ? 'ЛЕГКЕ ПОВЕРНЕННЯ' : 'ВІДНОВЛЕННЯ')+(done?' · ВИКОНАНО':'')+'</div>' +
+      '<div class="today-card reentry-card'+(isDeload?' deload-card':'')+(done?' is-done':'')+'" style="cursor:default;">' +
+        '<div class="today-card-type">'+cardType+(done?' · ВИКОНАНО':'')+'</div>' +
         '<div class="today-plan-text">'+escapeHtml(displayPlanText(item.text, state.maxHR))+'</div>' +
         (zone ? '<div class="today-zone-pill">Зона '+zone.zone+' · '+zoneRangeForZoneStr(zone.zone, state.maxHR)+' уд/хв</div>' : '') +
       '</div>' +
       (isRun ? '<div class="today-actions"><button class="btn '+(done?'btn-done-state':'')+'" id="reentry-done-btn">'+(done ? '✓ Виконано' : 'Позначити виконаним')+'</button></div>' : '') +
-      '<button class="btn btn-warn btn-block" id="today-pause-btn">🤒 Знову погіршало — призупинити</button>' +
-      '<div class="today-note"><strong>Далі:</strong> після цих днів повертаємось до плану — тиждень '+state.reentry.resumeWeek+', '+DAY_LABEL_FULL[state.reentry.resumeDayKey].toLowerCase()+' («'+escapeHtml(resumeWk.phase)+'»). ' +
-        'Темп — розмовний; якщо важко дихати, перейдіть на ходьбу.' +
-        (stop ? '<br><br><strong>Зупиніться негайно, якщо:</strong> '+escapeHtml(stop.text) : '') + '</div>';
+      '<button class="btn btn-warn btn-block" id="today-pause-btn">'+(isDeload ? '🤒 Захворів — призупинити план' : '🤒 Знову погіршало — призупинити')+'</button>' +
+      (isDeload
+        ? '<div class="today-note"><strong>Далі:</strong> після цього тижня — тиждень '+state.reentry.resumeWeek+', понеділок («'+escapeHtml(resumeWk.phase)+'»). ' +
+            'Це легкий тиждень із тренувань тижня '+state.reentry.sourceWeek+': біжіть у розмовному темпі, щоб тіло відновилось і засвоїло навантаження.</div>'
+        : '<div class="today-note"><strong>Далі:</strong> після цих днів повертаємось до плану — тиждень '+state.reentry.resumeWeek+', '+DAY_LABEL_FULL[state.reentry.resumeDayKey].toLowerCase()+' («'+escapeHtml(resumeWk.phase)+'»). ' +
+            'Темп — розмовний; якщо важко дихати, перейдіть на ходьбу.' +
+            (stop ? '<br><br><strong>Зупиніться негайно, якщо:</strong> '+escapeHtml(stop.text) : '') + '</div>');
 
     if (isRun) document.getElementById('reentry-done-btn').addEventListener('click', function(){ toggleReentryDone(ctx.index); });
     document.getElementById('today-pause-btn').addEventListener('click', function(){ openPauseModal(); });
@@ -1398,7 +1605,16 @@ input, select, textarea{ font-size:16px; }
     // Підсумок + (НОВЕ) позначка паузи/повернення
     var summary = 'Виконано <strong style="color:var(--text)">'+done+'</strong> з '+TOTAL_TRACKABLE+' тренувань';
     if (ctx.mode === 'paused') summary += '<span style="color:var(--warn)">⏸ пауза · дати орієнтовні, перерахуються після повернення</span>';
-    if (ctx.mode === 'reentry') summary += '<span style="color:var(--warn)">повернення після хвороби</span>';
+    if (ctx.mode === 'reentry'){
+      summary += (state.reentry.kind === 'deload')
+        ? '<span style="color:var(--success)">розвантажувальний тиждень, далі тиждень '+state.reentry.resumeWeek+'</span>'
+        : '<span style="color:var(--warn)">повернення після хвороби</span>';
+    }
+    if (state.repeat){
+      summary += '<span style="color:var(--accent-2)">🔁 з '+formatDateLong(dateFromKey(state.repeat.start))+' '+
+        (state.repeat.mode === 'deload' ? 'розвантажувальний тиждень' : 'повтор тижня '+state.repeat.base)+
+        ' · дати далі зсунуться на 7 днів</span>';
+    }
     document.getElementById('plan-summary').innerHTML = summary;
 
     if (state.openWeekInList === null){ state.openWeekInList = Math.min(TOTAL_WEEKS, Math.max(1, ctx.week)); }
@@ -1865,6 +2081,77 @@ input, select, textarea{ font-size:16px; }
   }
 
   /* =================================================================
+     12б. МОДАЛКА «ПОВТОРИТИ ТИЖДЕНЬ»
+     ================================================================= */
+  function openRepeatModal(mode){
+    renderRepeatModal(mode);
+    document.getElementById('overlay-repeat').classList.add('open');
+  }
+  function closeRepeatModal(){ document.getElementById('overlay-repeat').classList.remove('open'); }
+
+  // Короткий опис бігових днів тижня: «Пн: …; Ср: …; Пт: …»
+  function weekRunsSummary(w){
+    var wk = PLAN.weeks[w-1], parts = [];
+    DAY_KEYS.forEach(function(k){
+      var t = wk.days[k] || '', type = classifyDay(t);
+      if (type === 'run' || type === 'long' || type === 'race'){
+        parts.push(DAY_LABEL_SHORT[k]+': '+displayPlanText(t, state.maxHR).replace(/\s*\[[^\]]*\]/g, ''));
+      }
+    });
+    return parts.join(' · ');
+  }
+
+  function renderRepeatModal(mode){
+    var rd = computeRepeatPreview('deload');
+    var rr = computeRepeatPreview('repeat');
+    if (!mode) mode = rd.valid ? 'deload' : 'repeat';
+    var r = mode === 'deload' ? rd : rr;
+
+    document.getElementById('repeat-sub').textContent =
+      'Починаємо з '+DAY_LABEL_FULL[planPositionForDate(r.start).dayKey].toLowerCase()+', '+formatDateLong(r.start);
+
+    var html = '<p class="detail-note">Коли накопичилась втома, пульс росте на тому самому темпі або тиждень пішов не за планом, краще пройти ще один тиждень, ніж поспішати далі. План сам продовжиться після нього.</p>';
+    html += '<div class="choice-list">';
+    if (rd.valid){
+      html += '<button type="button" class="choice-card'+(mode==='deload'?' selected':'')+'" data-mode="deload" aria-pressed="'+(mode==='deload')+'">' +
+        '<div class="choice-title">Розвантажувальний тиждень<span class="choice-badge">легше</span></div>' +
+        '<div class="choice-text">Тренування тижня '+rd.deload+' (менший обсяг), потім тиждень '+rd.nextWeek+'. Позначки «виконано» не зміняться.</div>' +
+        '<div class="choice-days">'+escapeHtml(weekRunsSummary(rd.deload))+'</div>' +
+      '</button>';
+    }
+    html += '<button type="button" class="choice-card'+(mode==='repeat'?' selected':'')+'" data-mode="repeat" aria-pressed="'+(mode==='repeat')+'">' +
+        '<div class="choice-title">Повторити тиждень '+rr.base+'</div>' +
+        '<div class="choice-text">Той самий обсяг ще раз, щоб закріпити, потім тиждень '+rr.nextWeek+'. Підходить, коли тиждень дався важко або частину пропущено.</div>' +
+        '<div class="choice-days">'+escapeHtml(weekRunsSummary(rr.base))+'</div>' +
+      '</button>';
+    html += '</div>';
+
+    html += '<div class="resume-summary">' +
+      '<div class="resume-row"><span>Початок</span><span>'+formatDateLong(r.start)+'</span></div>' +
+      '<div class="resume-row"><span>Далі за планом</span><span>тиждень '+r.nextWeek+' з '+formatDateLong(r.nextWeekDate)+'</span></div>' +
+      '<div class="resume-row"><span>Дата гонки (тиж. 24)</span><span>'+formatDateWithYear(r.raceAfter)+'</span></div>' +
+      '<div class="resume-row"><span>Зсув гонки</span><span>'+(r.raceShiftDays > 0 ? '+'+r.raceShiftDays+' '+pluralDays(r.raceShiftDays) : 'без зсуву')+'</span></div>' +
+    '</div>';
+    if (mode === 'repeat'){
+      html += '<p class="detail-note">У день старту з тижня '+rr.base+' знімуться позначки «виконано», щоб ви пройшли його знову.</p>';
+    }
+    if (daysBetween(new Date(), r.start) > 0){
+      html += '<p class="detail-note">До '+formatDateLong(r.start)+' план іде як звичайно. Скасувати можна на екрані «Сьогодні».</p>';
+    }
+    html += '<button class="btn btn-primary btn-block" id="repeat-confirm-btn">'+(mode === 'deload' ? 'Взяти розвантажувальний тиждень' : 'Повторити тиждень '+rr.base)+'</button>';
+    document.getElementById('repeat-body').innerHTML = html;
+
+    document.querySelectorAll('#repeat-body .choice-card').forEach(function(el){
+      el.addEventListener('click', function(){ renderRepeatModal(el.getAttribute('data-mode')); });
+    });
+    document.getElementById('repeat-confirm-btn').addEventListener('click', async function(){
+      await scheduleRepeat(mode);
+      closeRepeatModal();
+      renderAll();
+    });
+  }
+
+  /* =================================================================
      13. ГЛОБАЛЬНІ ОБРОБНИКИ ПОДІЙ (навішуються один раз)
      ================================================================= */
   var eventsBound = false;
@@ -1904,6 +2191,7 @@ input, select, textarea{ font-size:16px; }
     bindOverlay('overlay-weight', 'weight-close', closeWeightModal);
     bindOverlay('overlay-theme', 'theme-close', closeThemeModal);
     bindOverlay('overlay-pause', 'pause-close', closePauseModal);   // [НОВЕ]
+    bindOverlay('overlay-repeat', 'repeat-close', closeRepeatModal);
 
     document.getElementById('detail-done-btn').addEventListener('click', function(){
       if (currentDetail) toggleDone(currentDetail.week, currentDetail.dayKey);
@@ -1911,7 +2199,7 @@ input, select, textarea{ font-size:16px; }
 
     // Esc закриває всі модалки
     document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape'){ closeDetailModal(); closeInfoModal(); closeWeightModal(); closeThemeModal(); closePauseModal(); }
+      if (e.key === 'Escape'){ closeDetailModal(); closeInfoModal(); closeWeightModal(); closeThemeModal(); closePauseModal(); closeRepeatModal(); }
     });
   }
 
